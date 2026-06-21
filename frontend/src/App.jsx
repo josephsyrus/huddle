@@ -71,10 +71,22 @@ function App() {
         setMessages((prev) => ({
           ...prev,
           [updated.channelId]: (prev[updated.channelId] || []).map((m) =>
-            m.id === updated.id ? updated : m
+            m.id === updated.id ? { ...m, ...updated } : m
           ),
         }));
       });
+
+      socket.current.on(
+        "reactionUpdated",
+        ({ messageId, channelId, reactions }) => {
+          setMessages((prev) => ({
+            ...prev,
+            [channelId]: (prev[channelId] || []).map((m) =>
+              m.id === messageId ? { ...m, reactions } : m
+            ),
+          }));
+        }
+      );
 
       socket.current.on("messageDeleted", ({ id, channelId }) => {
         setMessages((prev) => ({
@@ -279,6 +291,16 @@ function App() {
     });
   };
 
+  const handleToggleReaction = (messageId, emoji) => {
+    if (!socket.current || !currentWorkspaceId) return;
+    socket.current.emit("toggleReaction", {
+      messageId,
+      emoji,
+      channelId: currentChannelId,
+      workspaceId: currentWorkspaceId,
+    });
+  };
+
   const handleTyping = (isTyping) => {
     if (!socket.current || !currentWorkspaceId || !currentChannelId) return;
     socket.current.emit(isTyping ? "startTyping" : "stopTyping", {
@@ -357,6 +379,7 @@ function App() {
         onSendMessage={handleSendMessage}
         onEditMessage={handleEditMessage}
         onDeleteMessage={handleDeleteMessage}
+        onToggleReaction={handleToggleReaction}
         onTyping={handleTyping}
         typingUsers={(typingUsers[currentChannelId] || []).filter(
           (u) => u !== user.username

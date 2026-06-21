@@ -15,6 +15,7 @@ const {
   createMessage,
   editMessage,
   deleteMessage,
+  toggleReaction,
 } = require("./controllers/messageController");
 const { initDb } = require("./config/initDb");
 
@@ -149,6 +150,24 @@ io.on("connection", (socket) => {
       }
     } catch (error) {
       console.error("Error deleting message:", error);
+    }
+  });
+
+  socket.on("toggleReaction", async (data) => {
+    try {
+      const result = await toggleReaction({
+        messageId: data.messageId,
+        userId: socket.user.id,
+        emoji: data.emoji,
+      });
+      if (result) {
+        io.to(data.workspaceId).emit("reactionUpdated", {
+          ...result,
+          channelId: data.channelId,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling reaction:", error);
     }
   });
 

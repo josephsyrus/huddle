@@ -10,6 +10,7 @@ const Chat = ({
   onSendMessage,
   onEditMessage,
   onDeleteMessage,
+  onToggleReaction,
   onTyping,
   typingUsers,
   user,
@@ -68,6 +69,7 @@ const Chat = ({
                   user={user}
                   onEdit={onEditMessage}
                   onDelete={onDeleteMessage}
+                  onReact={onToggleReaction}
                 />
               ))}
               <div ref={messagesEndRef} />

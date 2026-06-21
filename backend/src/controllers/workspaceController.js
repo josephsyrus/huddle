@@ -239,12 +239,35 @@ const getWorkspaceData = async (req, res) => {
       [workspaceId]
     );
 
+    const reactionsResult = await db.query(
+      `SELECT mr.message_id, mr.emoji, COUNT(*)::int AS count, ARRAY_AGG(mr.user_id) AS user_ids
+       FROM message_reactions mr
+       WHERE mr.message_id IN (
+         SELECT message_id FROM messages
+         WHERE channel_id IN (SELECT channel_id FROM channels WHERE workspace_id = $1)
+       )
+       GROUP BY mr.message_id, mr.emoji`,
+      [workspaceId]
+    );
+
+    const reactionsByMessage = {};
+    reactionsResult.rows.forEach((r) => {
+      if (!reactionsByMessage[r.message_id]) reactionsByMessage[r.message_id] = [];
+      reactionsByMessage[r.message_id].push({
+        emoji: r.emoji,
+        count: r.count,
+        userIds: r.user_ids,
+      });
+    });
+
     const messagesByChannel = {};
     messagesResult.rows.forEach((msg) => {
       if (!messagesByChannel[msg.channel_id]) {
         messagesByChannel[msg.channel_id] = [];
       }
-      messagesByChannel[msg.channel_id].push(formatMessage(msg, msg.username));
+      const formatted = formatMessage(msg, msg.username);
+      formatted.reactions = reactionsByMessage[formatted.id] || [];
+      messagesByChannel[msg.channel_id].push(formatted);
     });
 
     const response = {

@@ -9,6 +9,7 @@ const formatMessage = (row, username) => ({
   channelId: row.channel_id,
   edited: !!row.edited_at,
   deleted: !!row.is_deleted,
+  reactions: [],
 });
 
 const createMessage = async ({ content, channelId, userId }) => {
@@ -94,4 +95,51 @@ const deleteMessage = async ({ messageId, userId }) => {
   }
 };
 
-module.exports = { createMessage, editMessage, deleteMessage, formatMessage };
+const getReactions = async (messageId) => {
+  const result = await db.query(
+    `SELECT emoji, COUNT(*)::int AS count, ARRAY_AGG(user_id) AS user_ids
+     FROM message_reactions WHERE message_id = $1 GROUP BY emoji`,
+    [messageId]
+  );
+  return result.rows.map((r) => ({
+    emoji: r.emoji,
+    count: r.count,
+    userIds: r.user_ids,
+  }));
+};
+
+const toggleReaction = async ({ messageId, userId, emoji }) => {
+  if (!isValidString(emoji, 1, 32) || !messageId) {
+    return null;
+  }
+  try {
+    const inserted = await db.query(
+      `INSERT INTO message_reactions (message_id, user_id, emoji)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (message_id, user_id, emoji) DO NOTHING
+       RETURNING reaction_id`,
+      [messageId, userId, emoji]
+    );
+
+    if (inserted.rows.length === 0) {
+      await db.query(
+        "DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3",
+        [messageId, userId, emoji]
+      );
+    }
+
+    return { messageId, reactions: await getReactions(messageId) };
+  } catch (error) {
+    console.error("Error toggling reaction:", error);
+    return null;
+  }
+};
+
+module.exports = {
+  createMessage,
+  editMessage,
+  deleteMessage,
+  toggleReaction,
+  getReactions,
+  formatMessage,
+};

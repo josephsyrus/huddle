@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { EditIcon, TrashIcon } from "../ui/Icons";
+import { EditIcon, TrashIcon, ReactionIcon } from "../ui/Icons";
 
-const Message = ({ message, user, onEdit, onDelete }) => {
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "😢"];
+
+const Message = ({ message, user, onEdit, onDelete, onReact }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(message.text || "");
+  const [showPicker, setShowPicker] = useState(false);
 
   const formattedTime = message.createdAt
     ? new Date(message.createdAt).toLocaleTimeString([], {
@@ -15,6 +18,7 @@ const Message = ({ message, user, onEdit, onDelete }) => {
     ? message.userId.substring(0, 2).toUpperCase()
     : "??";
   const isOwn = user && message.userId === user.username;
+  const reactions = message.reactions || [];
 
   const saveEdit = () => {
     const trimmed = draft.trim();
@@ -22,6 +26,11 @@ const Message = ({ message, user, onEdit, onDelete }) => {
       onEdit(message.id, trimmed);
     }
     setIsEditing(false);
+  };
+
+  const react = (emoji) => {
+    onReact(message.id, emoji);
+    setShowPicker(false);
   };
 
   return (
@@ -66,21 +75,55 @@ const Message = ({ message, user, onEdit, onDelete }) => {
             {message.edited && <span className="message-edited"> (edited)</span>}
           </p>
         )}
+        {!message.deleted && reactions.length > 0 && (
+          <div className="message-reactions">
+            {reactions.map((r) => (
+              <button
+                key={r.emoji}
+                className={`reaction-badge ${
+                  r.userIds.includes(user?.id) ? "reacted" : ""
+                }`}
+                onClick={() => react(r.emoji)}
+              >
+                <span>{r.emoji}</span>
+                <span className="reaction-count">{r.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {isOwn && !message.deleted && !isEditing && (
+      {!message.deleted && !isEditing && (
         <div className="message-actions">
-          <button
-            onClick={() => {
-              setDraft(message.text);
-              setIsEditing(true);
-            }}
-            title="Edit"
-          >
-            <EditIcon />
-          </button>
-          <button onClick={() => onDelete(message.id)} title="Delete">
-            <TrashIcon />
-          </button>
+          <div className="reaction-add">
+            <button onClick={() => setShowPicker((s) => !s)} title="Add reaction">
+              <ReactionIcon />
+            </button>
+            {showPicker && (
+              <div className="reaction-picker">
+                {REACTION_EMOJIS.map((emoji) => (
+                  <button key={emoji} onClick={() => react(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {isOwn && (
+            <>
+              <button
+                onClick={() => {
+                  setDraft(message.text);
+                  setIsEditing(true);
+                }}
+                title="Edit"
+              >
+                <EditIcon />
+              </button>
+              <button onClick={() => onDelete(message.id)} title="Delete">
+                <TrashIcon />
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
