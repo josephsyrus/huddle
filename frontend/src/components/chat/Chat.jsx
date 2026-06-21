@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ChatHeader from "./ChatHeader";
 import Message from "./Message";
+import TypingIndicator from "./TypingIndicator";
 import { SendIcon } from "../ui/Icons";
 
 const Chat = ({
@@ -9,21 +10,41 @@ const Chat = ({
   onSendMessage,
   onEditMessage,
   onDeleteMessage,
+  onTyping,
+  typingUsers,
   user,
   workspace,
 }) => {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
+  const typingTimeout = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, typingUsers]);
+
+  const stopTyping = () => {
+    clearTimeout(typingTimeout.current);
+    typingTimeout.current = null;
+    onTyping?.(false);
+  };
+
+  const handleInputChange = (e) => {
+    setNewMessage(e.target.value);
+    if (!onTyping) return;
+    if (!typingTimeout.current) {
+      onTyping(true);
+    }
+    clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(stopTyping, 2000);
+  };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (newMessage.trim()) {
       onSendMessage(newMessage.trim());
       setNewMessage("");
+      stopTyping();
     }
   };
 
@@ -68,11 +89,12 @@ const Chat = ({
       </div>
       {channel && user && (
         <div className="chat-input-area">
+          <TypingIndicator users={typingUsers} />
           <form onSubmit={handleSendMessage} className="chat-form">
             <input
               type="text"
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleInputChange}
               placeholder={`Message #${channel.channel_name}`}
               className="chat-input"
             />

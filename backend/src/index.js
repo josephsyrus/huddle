@@ -78,6 +78,20 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("startTyping", (data) => {
+    socket.to(data.workspaceId).emit("userTyping", {
+      channelId: data.channelId,
+      username: socket.user.username,
+    });
+  });
+
+  socket.on("stopTyping", (data) => {
+    socket.to(data.workspaceId).emit("userStoppedTyping", {
+      channelId: data.channelId,
+      username: socket.user.username,
+    });
+  });
+
   socket.on("editMessage", async (data) => {
     try {
       const updated = await editMessage({

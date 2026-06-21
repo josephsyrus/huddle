@@ -28,6 +28,7 @@ function App() {
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null);
   const [currentChannelId, setCurrentChannelId] = useState(null);
   const [messages, setMessages] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
   const socket = useRef(null);
   const [toast, setToast] = useState(null);
   const [popups, setPopups] = useState({
@@ -80,6 +81,21 @@ function App() {
           [channelId]: (prev[channelId] || []).map((m) =>
             m.id === id ? { ...m, deleted: true, text: null } : m
           ),
+        }));
+      });
+
+      socket.current.on("userTyping", ({ channelId, username }) => {
+        setTypingUsers((prev) => {
+          const existing = prev[channelId] || [];
+          if (existing.includes(username)) return prev;
+          return { ...prev, [channelId]: [...existing, username] };
+        });
+      });
+
+      socket.current.on("userStoppedTyping", ({ channelId, username }) => {
+        setTypingUsers((prev) => ({
+          ...prev,
+          [channelId]: (prev[channelId] || []).filter((u) => u !== username),
         }));
       });
 
@@ -257,6 +273,14 @@ function App() {
     });
   };
 
+  const handleTyping = (isTyping) => {
+    if (!socket.current || !currentWorkspaceId || !currentChannelId) return;
+    socket.current.emit(isTyping ? "startTyping" : "stopTyping", {
+      workspaceId: currentWorkspaceId,
+      channelId: currentChannelId,
+    });
+  };
+
   const handleCreateChannel = async (channelName) => {
     if (!currentWorkspaceId) return;
     const sanitizedName = channelName.toLowerCase().replace(/\s+/g, "-");
@@ -326,6 +350,10 @@ function App() {
         onSendMessage={handleSendMessage}
         onEditMessage={handleEditMessage}
         onDeleteMessage={handleDeleteMessage}
+        onTyping={handleTyping}
+        typingUsers={(typingUsers[currentChannelId] || []).filter(
+          (u) => u !== user.username
+        )}
         user={user}
       />
 

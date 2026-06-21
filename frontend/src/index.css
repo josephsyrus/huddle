@@ -448,6 +448,14 @@ body {
   border-top: 1px solid var(--main-border);
 }
 
+.typing-indicator {
+  height: 1.1rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--text-dark);
+}
+
 .chat-form {
   display: flex;
   align-items: center;
