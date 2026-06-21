@@ -35,6 +35,8 @@ const io = new Server(httpServer, {
 
 app.set("io", io);
 
+app.set("trust proxy", 1);
+
 app.use(cors({ origin: FRONTEND_URL }));
 
 app.use(express.json());
