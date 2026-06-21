@@ -40,13 +40,13 @@ body {
   background-color: var(--main-bg);
 }
 
-/* --- App Container --- */
+
 .app-container {
   display: flex;
   height: 100vh;
 }
 
-/* --- Icons --- */
+
 .icon {
   width: 1.25rem;
   height: 1.25rem;
@@ -62,7 +62,7 @@ body {
 }
 
 .workspace-sidebar {
-  width: 4rem; /* w-16 */
+  width: 4rem;
   background-color: var(--workspace-bg);
   padding: 0.5rem 0;
   display: flex;
@@ -82,9 +82,9 @@ body {
 }
 
 .workspace-button {
-  width: 3rem; /* w-12 */
-  height: 3rem; /* h-12 */
-  border-radius: 9999px; /* rounded-full */
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
   background-color: var(--sidebar-hover-bg);
   color: var(--sidebar-text);
   display: flex;
@@ -98,13 +98,13 @@ body {
 }
 
 .workspace-button:hover {
-  border-radius: 0.75rem; /* rounded-xl */
+  border-radius: 0.75rem;
   background-color: var(--purple-accent);
   color: var(--text-white);
 }
 
 .workspace-button.active {
-  border-radius: 0.75rem; /* rounded-xl */
+  border-radius: 0.75rem;
   border-color: var(--workspace-active-border);
   background-color: var(--purple-accent);
   color: var(--text-white);
@@ -128,17 +128,17 @@ body {
   color: var(--sidebar-text);
   display: flex;
   flex-direction: column;
-  width: 16rem; /* w-64 */
+  width: 16rem;
   flex-shrink: 0;
-  position: relative; /* For positioning the user popup */
+  position: relative;
 }
 
 .sidebar-header {
   padding: 0 1rem;
-  height: 4rem; /* h-16 */
+  height: 4rem;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* <-- Change this */
+  justify-content: space-between;
   border-bottom: 1px solid var(--sidebar-border);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -162,8 +162,8 @@ body {
 }
 
 .sidebar-header h1 {
-  font-size: 1.25rem; /* text-xl */
-  font-weight: 700; /* font-bold */
+  font-size: 1.25rem;
+  font-weight: 700;
   color: var(--text-white);
 }
 
@@ -199,11 +199,11 @@ body {
 }
 
 .sidebar-section h2 {
-  font-size: 0.875rem; /* text-sm */
-  font-weight: 700; /* font-bold */
-  letter-spacing: 0.05em; /* tracking-wider */
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: var(--sidebar-channel-title);
-  margin-bottom: 0.5rem; /* mb-2 */
+  margin-bottom: 0.5rem;
 }
 
 .channel-list {
@@ -214,7 +214,7 @@ body {
   display: flex;
   align-items: center;
   padding: 0.5rem;
-  border-radius: 0.375rem; /* rounded-md */
+  border-radius: 0.375rem;
   cursor: pointer;
   margin-bottom: 0.25rem;
 }
@@ -229,7 +229,7 @@ body {
 }
 
 .channel-item span {
-  margin-left: 0.5rem; /* ml-2 */
+  margin-left: 0.5rem;
 }
 
 .channel-item .unread-badge {
@@ -288,7 +288,7 @@ body {
   background-color: var(--sidebar-input-bg);
   color: var(--text-white);
   padding: 0.5rem 0.75rem;
-  border-radius: 0.375rem; /* rounded-md */
+  border-radius: 0.375rem;
   border: 1px solid var(--sidebar-input-border);
 }
 
@@ -314,7 +314,7 @@ body {
 }
 
 .user-id {
-  font-size: 0.875rem; /* text-sm */
+  font-size: 0.875rem;
   color: var(--text-light);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -753,9 +753,9 @@ body {
 
 .user-popup {
   position: absolute;
-  bottom: 4.5rem; /* height of footer + some margin */
+  bottom: 4.5rem;
   left: 0.5rem;
-  width: 240px; /* Fixed width */
+  width: 240px;
   z-index: 10;
   background-color: var(--workspace-bg);
   border: 1px solid var(--sidebar-border);

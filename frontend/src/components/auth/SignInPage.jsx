@@ -8,7 +8,7 @@ const SignInPage = ({ onLogin, onSwitchToSignUp }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
+    setError("");
     if (!username.trim() || !password.trim()) {
       setError("Username and password are required.");
       return;
@@ -26,7 +26,7 @@ const SignInPage = ({ onLogin, onSwitchToSignUp }) => {
 
   return (
     <div className="popup-box">
-      <h1 className="popup-title">Sign In to Slack</h1>
+      <h1 className="popup-title">Sign In to Huddle</h1>
       {error && <p className="auth-error">{error}</p>}{" "}
       <form onSubmit={handleSubmit} className="popup-form">
         <div className="input-group">

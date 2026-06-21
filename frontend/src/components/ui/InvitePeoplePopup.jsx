@@ -6,7 +6,7 @@ const InvitePeoplePopup = ({ workspace, onClose }) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(workspace.id).then(() => {
       setCopyButtonText("Copied!");
-      setTimeout(() => setCopyButtonText("Copy ID"), 2000); // Reset after 2 seconds
+      setTimeout(() => setCopyButtonText("Copy ID"), 2000);
     });
   };
 
