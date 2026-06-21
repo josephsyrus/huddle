@@ -304,8 +304,18 @@ body {
   margin-bottom: 0.5rem;
   cursor: pointer;
 }
-.checkbox-row input {
-  width: auto;
+.checkbox-row input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: none;
+  accent-color: var(--purple-accent);
+  cursor: pointer;
+}
+.checkbox-row span {
+  flex: 1;
 }
 .member-select {
   max-height: 12rem;
