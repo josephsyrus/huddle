@@ -282,16 +282,38 @@ const getWorkspaceData = async (req, res) => {
       messagesByChannel[msg.channel_id].push(formatted);
     });
 
+    const unreadResult = await db.query(
+      `SELECT m.channel_id, COUNT(*)::int AS unread
+       FROM messages m
+       JOIN channel_members cm ON m.channel_id = cm.channel_id AND cm.user_id = $2
+       JOIN channels c ON m.channel_id = c.channel_id
+       LEFT JOIN channel_read_status crs
+         ON crs.channel_id = m.channel_id AND crs.user_id = $2
+       WHERE c.workspace_id = $1
+         AND m.is_deleted = FALSE
+         AND m.user_id <> $2
+         AND m.sent_at > COALESCE(crs.last_read_at, to_timestamp(0))
+       GROUP BY m.channel_id`,
+      [workspaceId, userId]
+    );
+
+    const unreadByChannel = {};
+    unreadResult.rows.forEach((r) => {
+      unreadByChannel[r.channel_id] = r.unread;
+    });
+
     const response = {
       ...workspace,
       members: membersResult.rows,
       channels: channels.map((c) => ({
         ...c,
         messages: messagesByChannel[c.channel_id] || [],
+        unread: unreadByChannel[c.channel_id] || 0,
       })),
       dms: dmsResult.rows.map((d) => ({
         ...d,
         messages: messagesByChannel[d.channel_id] || [],
+        unread: unreadByChannel[d.channel_id] || 0,
       })),
     };
 

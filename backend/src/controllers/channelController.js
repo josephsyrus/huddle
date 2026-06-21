@@ -57,4 +57,22 @@ const createChannel = async (req, res) => {
   }
 };
 
-module.exports = { createChannel };
+const markRead = async (req, res) => {
+  const { channelId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    await db.query(
+      `INSERT INTO channel_read_status (user_id, channel_id, last_read_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (user_id, channel_id) DO UPDATE SET last_read_at = NOW()`,
+      [userId, channelId]
+    );
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error marking channel read:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+module.exports = { createChannel, markRead };

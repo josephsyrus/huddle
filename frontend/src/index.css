@@ -232,6 +232,23 @@ body {
   margin-left: 0.5rem; /* ml-2 */
 }
 
+.channel-item .unread-badge {
+  margin-left: auto;
+}
+.unread-badge {
+  background-color: var(--danger-bg);
+  color: var(--text-white);
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.35rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .member-list {
   list-style: none;
 }

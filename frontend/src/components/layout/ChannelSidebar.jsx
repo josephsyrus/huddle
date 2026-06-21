@@ -11,6 +11,7 @@ const ChannelSidebar = ({
   currentChannelId,
   user,
   onlineUserIds = [],
+  unreadCounts = {},
   onOpenDm,
   isUserPopupVisible,
   onLogout,
@@ -85,18 +86,22 @@ const ChannelSidebar = ({
             <div className="sidebar-section">
               <h2>CHANNELS</h2>
               <ul className="channel-list">
-                {workspace.channels?.map((channel) => (
-                  <li
-                    key={channel.channel_id}
-                    className={`channel-item ${
-                      currentChannelId === channel.channel_id ? "active" : ""
-                    }`}
-                    onClick={() => onSelectChannel(channel)}
-                  >
-                    <HashIcon />
-                    <span>{channel.channel_name}</span>
-                  </li>
-                ))}
+                {workspace.channels?.map((channel) => {
+                  const unread = unreadCounts[channel.channel_id] || 0;
+                  return (
+                    <li
+                      key={channel.channel_id}
+                      className={`channel-item ${
+                        currentChannelId === channel.channel_id ? "active" : ""
+                      }`}
+                      onClick={() => onSelectChannel(channel)}
+                    >
+                      <HashIcon />
+                      <span>{channel.channel_name}</span>
+                      {unread > 0 && <span className="unread-badge">{unread}</span>}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <div className="create-channel-section">
@@ -114,24 +119,30 @@ const ChannelSidebar = ({
               <div className="sidebar-section">
                 <h2>DIRECT MESSAGES</h2>
                 <ul className="channel-list">
-                  {workspace.dms.map((dm) => (
-                    <li
-                      key={dm.channel_id}
-                      className={`channel-item ${
-                        currentChannelId === dm.channel_id ? "active" : ""
-                      }`}
-                      onClick={() => onSelectChannel(dm)}
-                    >
-                      <span
-                        className={`status-dot ${
-                          onlineUserIds.includes(dm.otherUserId)
-                            ? "online"
-                            : "offline"
+                  {workspace.dms.map((dm) => {
+                    const unread = unreadCounts[dm.channel_id] || 0;
+                    return (
+                      <li
+                        key={dm.channel_id}
+                        className={`channel-item ${
+                          currentChannelId === dm.channel_id ? "active" : ""
                         }`}
-                      />
-                      <span>{dm.otherUsername}</span>
-                    </li>
-                  ))}
+                        onClick={() => onSelectChannel(dm)}
+                      >
+                        <span
+                          className={`status-dot ${
+                            onlineUserIds.includes(dm.otherUserId)
+                              ? "online"
+                              : "offline"
+                          }`}
+                        />
+                        <span>{dm.otherUsername}</span>
+                        {unread > 0 && (
+                          <span className="unread-badge">{unread}</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

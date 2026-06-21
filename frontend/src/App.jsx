@@ -30,7 +30,10 @@ function App() {
   const [messages, setMessages] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineUsers, setOnlineUsers] = useState({});
+  const [unreadCounts, setUnreadCounts] = useState({});
   const socket = useRef(null);
+  const currentChannelIdRef = useRef(null);
+  const currentWorkspaceIdRef = useRef(null);
   const [toast, setToast] = useState(null);
   const [popups, setPopups] = useState({
     user: false,
@@ -65,6 +68,16 @@ function App() {
             newMessage,
           ],
         }));
+
+        if (newMessage.userId === user.username) return;
+        if (newMessage.channelId === currentChannelIdRef.current) {
+          markChannelRead(newMessage.channelId);
+        } else {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [newMessage.channelId]: (prev[newMessage.channelId] || 0) + 1,
+          }));
+        }
       });
 
       socket.current.on("messageEdited", (updated) => {
@@ -123,6 +136,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    currentWorkspaceIdRef.current = currentWorkspaceId;
     if (socket.current && currentWorkspaceId) {
       socket.current.emit("joinWorkspace", currentWorkspaceId);
       fetchWorkspaceData(currentWorkspaceId);
@@ -131,6 +145,14 @@ function App() {
       setCurrentChannelId(null);
     }
   }, [currentWorkspaceId]);
+
+  useEffect(() => {
+    currentChannelIdRef.current = currentChannelId;
+    if (currentChannelId) {
+      setUnreadCounts((prev) => ({ ...prev, [currentChannelId]: 0 }));
+      markChannelRead(currentChannelId);
+    }
+  }, [currentChannelId]);
 
   const fetchWorkspaces = async () => {
     try {
@@ -193,6 +215,15 @@ function App() {
         messagesByChannel[dm.channel_id] = dm.messages;
       });
       setMessages(messagesByChannel);
+
+      const counts = {};
+      fetchedWorkspace.channels.forEach((c) => {
+        counts[c.channel_id] = c.unread || 0;
+      });
+      (fetchedWorkspace.dms || []).forEach((d) => {
+        counts[d.channel_id] = d.unread || 0;
+      });
+      setUnreadCounts(counts);
 
       const generalChannel = fetchedWorkspace.channels.find(
         (c) => c.channel_name === "general"
@@ -329,6 +360,12 @@ function App() {
     });
   };
 
+  const markChannelRead = (channelId) => {
+    const wsId = currentWorkspaceIdRef.current;
+    if (!wsId || !channelId) return;
+    api.post(`/workspaces/${wsId}/channels/${channelId}/read`).catch(() => {});
+  };
+
   const handleSearch = async (query) => {
     if (!currentWorkspaceId) return [];
     try {
@@ -414,6 +451,7 @@ function App() {
         currentChannelId={currentChannelId}
         user={user}
         onlineUserIds={onlineUsers[currentWorkspaceId] || []}
+        unreadCounts={unreadCounts}
         onOpenDm={handleOpenDm}
         isUserPopupVisible={popups.user}
         onLogout={handleLogout}

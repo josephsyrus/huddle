@@ -20,6 +20,14 @@ const initDb = async () => {
       UNIQUE(message_id, user_id, emoji)
     )`
   );
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS channel_read_status (
+      user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+      channel_id INTEGER REFERENCES channels(channel_id) ON DELETE CASCADE,
+      last_read_at TIMESTAMP DEFAULT NOW(),
+      PRIMARY KEY (user_id, channel_id)
+    )`
+  );
 };
 
 module.exports = { initDb };

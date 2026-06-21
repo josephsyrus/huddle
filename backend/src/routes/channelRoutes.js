@@ -1,11 +1,12 @@
 const express = require("express");
-// Allow routes to access params from parent routers
 const router = express.Router({ mergeParams: true });
-const { createChannel } = require("../controllers/channelController");
+const { createChannel, markRead } = require("../controllers/channelController");
 const { protect } = require("../middleware/authMiddleware");
 
 router.use(protect);
 
-router.route("/").post(createChannel); // POST /api/workspaces/:workspaceId/channels
+router.route("/").post(createChannel);
+
+router.post("/:channelId/read", markRead);
 
 module.exports = router;
