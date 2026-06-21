@@ -129,6 +129,29 @@ function App() {
         setOnlineUsers((prev) => ({ ...prev, [workspaceId]: onlineUserIds }));
       });
 
+      socket.current.on(
+        "dmOpened",
+        ({ workspaceId, channel_id, other_user_id, other_username }) => {
+          setWorkspaces((prev) => {
+            const ws = prev[workspaceId];
+            if (!ws) return prev;
+            const dms = ws.dms || [];
+            if (dms.some((d) => d.channel_id === channel_id)) return prev;
+            const newDm = {
+              channel_id,
+              channel_name: other_username,
+              otherUsername: other_username,
+              otherUserId: other_user_id,
+              isDm: true,
+            };
+            return { ...prev, [workspaceId]: { ...ws, dms: [...dms, newDm] } };
+          });
+          setMessages((prev) =>
+            prev[channel_id] ? prev : { ...prev, [channel_id]: [] }
+          );
+        }
+      );
+
       socket.current.on("memberJoined", ({ workspaceId, member }) => {
         setWorkspaces((prev) => {
           const ws = prev[workspaceId];

@@ -52,6 +52,16 @@ const openDm = async (req, res) => {
       [targetUserId]
     );
 
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`user:${targetUserId}`).emit("dmOpened", {
+        workspaceId,
+        channel_id: channelId,
+        other_user_id: userId,
+        other_username: req.user.username,
+      });
+    }
+
     res.json({
       channel_id: channelId,
       other_user_id: targetUserId,

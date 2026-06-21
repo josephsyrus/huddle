@@ -32,6 +32,8 @@ const io = new Server(httpServer, {
   },
 });
 
+app.set("io", io);
+
 app.use(cors({ origin: FRONTEND_URL }));
 
 app.use(express.json());
@@ -84,6 +86,7 @@ const emitPresence = (workspaceId) => {
 
 io.on("connection", (socket) => {
   socket.data.workspaces = new Set();
+  socket.join(`user:${socket.user.id}`);
 
   socket.on("joinWorkspace", (workspaceId) => {
     socket.join(workspaceId);
