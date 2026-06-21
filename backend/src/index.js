@@ -10,6 +10,7 @@ const { Server } = require("socket.io");
 const userRoutes = require("./routes/userRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const channelRoutes = require("./routes/channelRoutes");
+const { apiLimiter } = require("./middleware/rateLimiter");
 
 const {
   createMessage,
@@ -41,6 +42,8 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Hello from the Huddle Backend!");
 });
+
+app.use("/api", apiLimiter);
 
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
