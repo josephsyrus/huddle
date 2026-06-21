@@ -1,20 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { SearchIcon } from "../ui/Icons";
 
 const SearchBar = ({ onSearch, onSelect, resolveName }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
+  const searchSeq = useRef(0);
 
   const handleChange = async (e) => {
     const value = e.target.value;
     setQuery(value);
     if (value.trim().length < 2) {
+      searchSeq.current++;
       setResults([]);
       setOpen(false);
       return;
     }
+    const seq = ++searchSeq.current;
     const found = await onSearch(value.trim());
+    if (seq !== searchSeq.current) return;
     setResults(found);
     setOpen(true);
   };
