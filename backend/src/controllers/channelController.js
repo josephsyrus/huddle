@@ -31,6 +31,7 @@ const createChannel = async (req, res) => {
     );
     const newChannel = newChannelResult.rows[0];
 
+    let memberRows = [];
     if (isPrivate) {
       const wanted = Array.from(
         new Set([userId, ...(Array.isArray(memberIds) ? memberIds : [])])
@@ -39,7 +40,8 @@ const createChannel = async (req, res) => {
         "SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = ANY($2)",
         [workspaceId, wanted]
       );
-      for (const row of valid.rows) {
+      memberRows = valid.rows;
+      for (const row of memberRows) {
         await db.query(
           "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
           [row.user_id, newChannel.channel_id]
@@ -48,6 +50,19 @@ const createChannel = async (req, res) => {
     }
 
     await db.query("COMMIT");
+
+    const io = req.app.get("io");
+    if (io) {
+      const payload = { workspaceId, channel: newChannel };
+      if (isPrivate) {
+        memberRows.forEach((row) =>
+          io.to(`user:${row.user_id}`).emit("channelCreated", payload)
+        );
+      } else {
+        io.to(workspaceId).emit("channelCreated", payload);
+      }
+    }
+
     res.status(201).json(newChannel);
   } catch (error) {
     await db.query("ROLLBACK");

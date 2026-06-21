@@ -155,6 +155,24 @@ function App() {
         }
       );
 
+      socket.current.on("channelCreated", ({ workspaceId, channel }) => {
+        setWorkspaces((prev) => {
+          const ws = prev[workspaceId];
+          if (!ws) return prev;
+          const channels = ws.channels || [];
+          if (channels.some((c) => c.channel_id === channel.channel_id)) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [workspaceId]: {
+              ...ws,
+              channels: [...channels, { ...channel, messages: [], unread: 0 }],
+            },
+          };
+        });
+      });
+
       socket.current.on("memberJoined", ({ workspaceId, member }) => {
         setWorkspaces((prev) => {
           const ws = prev[workspaceId];
