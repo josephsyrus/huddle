@@ -3,7 +3,7 @@ const { isValidString, LIMITS } = require("../utils/validators");
 
 const createChannel = async (req, res) => {
   const { workspaceId } = req.params;
-  const { channelName } = req.body;
+  const { channelName, isPrivate, memberIds } = req.body;
   const userId = req.user.id;
 
   if (!isValidString(channelName, LIMITS.channelName.min, LIMITS.channelName.max)) {
@@ -12,35 +12,39 @@ const createChannel = async (req, res) => {
       .json({ message: "Channel name must be 1-50 characters." });
   }
 
+  const memberCheck = await db.query(
+    "SELECT 1 FROM workspace_members WHERE user_id = $1 AND workspace_id = $2",
+    [userId, workspaceId]
+  );
+  if (memberCheck.rows.length === 0) {
+    return res
+      .status(403)
+      .json({ message: "You are not a member of this workspace." });
+  }
+
   try {
     await db.query("BEGIN");
 
-    const memberCheck = await db.query(
-      "SELECT * FROM workspace_members WHERE user_id = $1 AND workspace_id = $2",
-      [userId, workspaceId]
-    );
-    if (memberCheck.rows.length === 0) {
-      return res
-        .status(403)
-        .json({ message: "You are not a member of this workspace." });
-    }
-
     const newChannelResult = await db.query(
-      "INSERT INTO channels (channel_name, workspace_id) VALUES ($1, $2) RETURNING channel_id, channel_name",
-      [channelName, workspaceId]
+      "INSERT INTO channels (channel_name, workspace_id, is_private) VALUES ($1, $2, $3) RETURNING channel_id, channel_name, is_private",
+      [channelName, workspaceId, !!isPrivate]
     );
     const newChannel = newChannelResult.rows[0];
 
-    const workspaceMembersResult = await db.query(
-      "SELECT user_id FROM workspace_members WHERE workspace_id = $1",
-      [workspaceId]
-    );
-
-    for (const member of workspaceMembersResult.rows) {
-      await db.query(
-        "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
-        [member.user_id, newChannel.channel_id]
+    if (isPrivate) {
+      const wanted = Array.from(
+        new Set([userId, ...(Array.isArray(memberIds) ? memberIds : [])])
       );
+      const valid = await db.query(
+        "SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = ANY($2)",
+        [workspaceId, wanted]
+      );
+      for (const row of valid.rows) {
+        await db.query(
+          "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
+          [row.user_id, newChannel.channel_id]
+        );
+      }
     }
 
     await db.query("COMMIT");

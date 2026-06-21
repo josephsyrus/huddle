@@ -8,6 +8,7 @@ import {
   Pencil,
   SmilePlus,
   Search,
+  Lock,
 } from "lucide-react";
 
 export const HashIcon = (props) => <Hash className="icon" {...props} />;
@@ -26,3 +27,4 @@ export const ReactionIcon = (props) => (
   <SmilePlus className="icon" {...props} />
 );
 export const SearchIcon = (props) => <Search className="icon" {...props} />;
+export const LockIcon = (props) => <Lock className="icon" {...props} />;

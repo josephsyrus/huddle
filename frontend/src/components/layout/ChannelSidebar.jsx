@@ -1,12 +1,18 @@
 import React, { useState } from "react";
-import { HashIcon, UserIcon, AddUserIcon, ChevronDownIcon } from "../ui/Icons";
+import {
+  HashIcon,
+  UserIcon,
+  AddUserIcon,
+  ChevronDownIcon,
+  LockIcon,
+} from "../ui/Icons";
 import UserPopup from "../ui/UserPopup";
 import WorkspaceSettingsMenu from "../ui/WorkspaceSettingsMenu";
 
 const ChannelSidebar = ({
   workspace,
   onSelectChannel,
-  onCreateChannel,
+  onAddChannel,
   onUserClick,
   currentChannelId,
   user,
@@ -19,16 +25,7 @@ const ChannelSidebar = ({
   onDeleteWorkspace,
   onRenameWorkspace,
 }) => {
-  const [newChannelName, setNewChannelName] = useState("");
   const [isSettingsMenuVisible, setSettingsMenuVisible] = useState(false);
-
-  const handleCreateChannel = (e) => {
-    e.preventDefault();
-    if (newChannelName.trim()) {
-      onCreateChannel(newChannelName.trim());
-      setNewChannelName("");
-    }
-  };
 
   const handleDeleteClick = () => {
     setSettingsMenuVisible(false);
@@ -96,24 +93,16 @@ const ChannelSidebar = ({
                       }`}
                       onClick={() => onSelectChannel(channel)}
                     >
-                      <HashIcon />
+                      {channel.is_private ? <LockIcon /> : <HashIcon />}
                       <span>{channel.channel_name}</span>
                       {unread > 0 && <span className="unread-badge">{unread}</span>}
                     </li>
                   );
                 })}
               </ul>
-            </div>
-            <div className="create-channel-section">
-              <form onSubmit={handleCreateChannel}>
-                <input
-                  type="text"
-                  value={newChannelName}
-                  onChange={(e) => setNewChannelName(e.target.value)}
-                  placeholder="Create a channel"
-                  className="create-channel-input"
-                />
-              </form>
+              <button className="add-channel-btn" onClick={onAddChannel}>
+                + Create channel
+              </button>
             </div>
             {workspace.dms?.length > 0 && (
               <div className="sidebar-section">

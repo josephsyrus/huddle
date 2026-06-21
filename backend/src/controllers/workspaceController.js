@@ -5,11 +5,13 @@ const { formatMessage } = require("./messageController");
 
 const getAccessibleChannelIds = async (workspaceId, userId) => {
   const result = await db.query(
-    `SELECT channel_id FROM channels WHERE workspace_id = $1 AND is_dm = FALSE
+    `SELECT channel_id FROM channels
+     WHERE workspace_id = $1 AND is_dm = FALSE AND is_private = FALSE
      UNION
      SELECT cm.channel_id FROM channel_members cm
      JOIN channels c ON cm.channel_id = c.channel_id
-     WHERE c.workspace_id = $1 AND c.is_dm = TRUE AND cm.user_id = $2`,
+     WHERE c.workspace_id = $1 AND cm.user_id = $2
+       AND (c.is_dm = TRUE OR c.is_private = TRUE)`,
     [workspaceId, userId]
   );
   return result.rows.map((r) => r.channel_id);
@@ -226,8 +228,12 @@ const getWorkspaceData = async (req, res) => {
     const workspace = workspaceResult.rows[0];
 
     const channelsResult = await db.query(
-      "SELECT channel_id, channel_name FROM channels WHERE workspace_id = $1 AND is_dm = FALSE",
-      [workspaceId]
+      `SELECT channel_id, channel_name, is_private FROM channels
+       WHERE workspace_id = $1 AND is_dm = FALSE
+         AND (is_private = FALSE OR channel_id IN (
+           SELECT channel_id FROM channel_members WHERE user_id = $2
+         ))`,
+      [workspaceId, userId]
     );
     const channels = channelsResult.rows;
 

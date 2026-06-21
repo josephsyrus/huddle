@@ -12,6 +12,7 @@ import AddWorkspaceChoicePopup from "./components/ui/AddWorkspaceChoicePopup";
 import JoinWorkspacePopup from "./components/ui/JoinWorkspacePopup";
 import ConfirmDeletePopup from "./components/ui/ConfirmDeletePopup";
 import RenameWorkspacePopup from "./components/ui/RenameWorkspacePopup";
+import CreateChannelPopup from "./components/ui/CreateChannelPopup";
 import Toast from "./components/ui/Toast";
 
 const decodeToken = (token) => {
@@ -43,6 +44,7 @@ function App() {
     joinWorkspace: false,
     confirmDelete: false,
     renameWorkspace: false,
+    createChannel: false,
   });
 
   useEffect(() => {
@@ -431,7 +433,7 @@ function App() {
     });
   };
 
-  const handleCreateChannel = async (channelName) => {
+  const handleCreateChannel = async (channelName, isPrivate, memberIds) => {
     if (!currentWorkspaceId) return;
     const sanitizedName = channelName.toLowerCase().replace(/\s+/g, "-");
     if (!sanitizedName) return;
@@ -439,10 +441,13 @@ function App() {
     try {
       const res = await api.post(`/workspaces/${currentWorkspaceId}/channels`, {
         channelName: sanitizedName,
+        isPrivate: !!isPrivate,
+        memberIds: memberIds || [],
       });
       const newChannel = res.data;
       await fetchWorkspaceData(currentWorkspaceId);
       setCurrentChannelId(newChannel.channel_id);
+      setPopups((p) => ({ ...p, createChannel: false }));
     } catch (error) {
       setToast({
         message: error.response?.data?.message || "Could not create channel.",
@@ -483,7 +488,7 @@ function App() {
       <ChannelSidebar
         workspace={currentWorkspace}
         onSelectChannel={(channel) => setCurrentChannelId(channel.channel_id)}
-        onCreateChannel={handleCreateChannel}
+        onAddChannel={() => setPopups({ ...popups, createChannel: true })}
         currentChannelId={currentChannelId}
         user={user}
         onlineUserIds={onlineUsers[currentWorkspaceId] || []}
@@ -557,6 +562,14 @@ function App() {
           currentWorkspaceName={currentWorkspace.name}
           onRename={handleRenameWorkspace}
           onClose={() => setPopups({ ...popups, renameWorkspace: false })}
+        />
+      )}
+      {popups.createChannel && currentWorkspace && (
+        <CreateChannelPopup
+          members={currentWorkspace.members || []}
+          currentUserId={user.id}
+          onClose={() => setPopups({ ...popups, createChannel: false })}
+          onCreate={handleCreateChannel}
         />
       )}
     </div>

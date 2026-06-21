@@ -12,11 +12,33 @@ const formatMessage = (row, username) => ({
   reactions: [],
 });
 
+const canAccessChannel = async (channelId, userId) => {
+  const result = await db.query(
+    `SELECT 1 FROM channels c
+     WHERE c.channel_id = $1
+       AND (
+         (c.is_dm = FALSE AND c.is_private = FALSE AND EXISTS (
+           SELECT 1 FROM workspace_members wm
+           WHERE wm.workspace_id = c.workspace_id AND wm.user_id = $2
+         ))
+         OR EXISTS (
+           SELECT 1 FROM channel_members cm
+           WHERE cm.channel_id = c.channel_id AND cm.user_id = $2
+         )
+       )`,
+    [channelId, userId]
+  );
+  return result.rows.length > 0;
+};
+
 const createMessage = async ({ content, channelId, userId }) => {
   if (!isValidString(content, LIMITS.message.min, LIMITS.message.max)) {
     return null;
   }
   if (!channelId || !userId) {
+    return null;
+  }
+  if (!(await canAccessChannel(channelId, userId))) {
     return null;
   }
   try {
