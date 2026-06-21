@@ -19,6 +19,7 @@ const {
   toggleReaction,
 } = require("./controllers/messageController");
 const { initDb } = require("./config/initDb");
+const db = require("./config/database");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -93,7 +94,18 @@ io.on("connection", (socket) => {
   socket.data.workspaces = new Set();
   socket.join(`user:${socket.user.id}`);
 
-  socket.on("joinWorkspace", (workspaceId) => {
+  socket.on("joinWorkspace", async (workspaceId) => {
+    try {
+      const member = await db.query(
+        "SELECT 1 FROM workspace_members WHERE user_id = $1 AND workspace_id = $2",
+        [socket.user.id, workspaceId]
+      );
+      if (member.rows.length === 0) return;
+    } catch (error) {
+      console.error("Error verifying workspace membership:", error);
+      return;
+    }
+
     socket.join(workspaceId);
     if (!socket.data.workspaces.has(workspaceId)) {
       socket.data.workspaces.add(workspaceId);
