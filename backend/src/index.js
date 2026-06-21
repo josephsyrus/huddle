@@ -11,7 +11,12 @@ const userRoutes = require("./routes/userRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const channelRoutes = require("./routes/channelRoutes");
 
-const { createMessage } = require("./controllers/messageController");
+const {
+  createMessage,
+  editMessage,
+  deleteMessage,
+} = require("./controllers/messageController");
+const { initDb } = require("./config/initDb");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -73,9 +78,45 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("editMessage", async (data) => {
+    try {
+      const updated = await editMessage({
+        messageId: data.messageId,
+        userId: socket.user.id,
+        content: data.content,
+      });
+      if (updated) {
+        io.to(data.workspaceId).emit("messageEdited", updated);
+      }
+    } catch (error) {
+      console.error("Error editing message:", error);
+    }
+  });
+
+  socket.on("deleteMessage", async (data) => {
+    try {
+      const result = await deleteMessage({
+        messageId: data.messageId,
+        userId: socket.user.id,
+      });
+      if (result) {
+        io.to(data.workspaceId).emit("messageDeleted", result);
+      }
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
+  });
+
   socket.on("disconnect", () => {});
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+initDb()
+  .then(() => {
+    httpServer.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Failed to initialize database:", error);
+    process.exit(1);
+  });

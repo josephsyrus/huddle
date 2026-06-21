@@ -14,7 +14,6 @@ import ConfirmDeletePopup from "./components/ui/ConfirmDeletePopup";
 import RenameWorkspacePopup from "./components/ui/RenameWorkspacePopup";
 import Toast from "./components/ui/Toast";
 
-//extracting payload from jwt and returning as a js object
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split(".")[1]));
@@ -24,14 +23,13 @@ const decodeToken = (token) => {
 };
 
 function App() {
-  const [user, setUser] = useState(null); //stores currently logged in user info as object
-  const [workspaces, setWorkspaces] = useState({}); //stores all workspaces user is part of
-  const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null); //state for selected workspaceid
-  const [currentChannelId, setCurrentChannelId] = useState(null); //state for selected channelid within a workspace
-  const [messages, setMessages] = useState({}); //list of messages in the channel?
-  const socket = useRef(null); //useRef to prevent rerender on socket connection
-  const [toast, setToast] = useState(null); //state of toast popup
-  //object of popup states for different popups
+  const [user, setUser] = useState(null);
+  const [workspaces, setWorkspaces] = useState({});
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null);
+  const [currentChannelId, setCurrentChannelId] = useState(null);
+  const [messages, setMessages] = useState({});
+  const socket = useRef(null);
+  const [toast, setToast] = useState(null);
   const [popups, setPopups] = useState({
     user: false,
     invite: false,
@@ -42,7 +40,6 @@ function App() {
     renameWorkspace: false,
   });
 
-  //triggers once on render, usefull for reloading the page and checking for logged in user using the jwt
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -50,46 +47,53 @@ function App() {
     }
   }, []);
 
-  //triggers when there is change in user state
   useEffect(() => {
     if (user) {
-      //establishing connection to the backend and setting the current attribute in the ref
       const SOCKET_URL =
         import.meta.env.VITE_API_URL || "http://localhost:3001";
       socket.current = io(SOCKET_URL, {
         auth: { token: localStorage.getItem("token") },
       });
-      //on connection print connected
-      socket.current.on("connect", () =>
-        console.log("Socket connected:", socket.current.id)
-      );
-      //receiveMessage is a custom event with a newMessage property, which adds the new message to old list of messages from the same channelId
+
       socket.current.on("receiveMessage", (newMessage) => {
         setMessages((prev) => ({
           ...prev,
-          //lhs[] is for key, rhs[] is for array
           [newMessage.channelId]: [
             ...(prev[newMessage.channelId] || []),
             newMessage,
           ],
         }));
       });
-      //triggers when user logs out (cleanup code)
+
+      socket.current.on("messageEdited", (updated) => {
+        setMessages((prev) => ({
+          ...prev,
+          [updated.channelId]: (prev[updated.channelId] || []).map((m) =>
+            m.id === updated.id ? updated : m
+          ),
+        }));
+      });
+
+      socket.current.on("messageDeleted", ({ id, channelId }) => {
+        setMessages((prev) => ({
+          ...prev,
+          [channelId]: (prev[channelId] || []).map((m) =>
+            m.id === id ? { ...m, deleted: true, text: null } : m
+          ),
+        }));
+      });
+
       return () => {
-        console.log("Disconnecting socket...");
         socket.current.disconnect();
       };
     }
   }, [user]);
 
-  //triggers when user switches between workspaces
   useEffect(() => {
     if (socket.current && currentWorkspaceId) {
-      //joinWorkspace tells the socket which workspace the user is currently in
       socket.current.emit("joinWorkspace", currentWorkspaceId);
       fetchWorkspaceData(currentWorkspaceId);
     } else if (!currentWorkspaceId) {
-      //sets the messages and channel to null if no workspace selected
       setMessages({});
       setCurrentChannelId(null);
     }
@@ -144,7 +148,6 @@ function App() {
       });
       setMessages(messagesByChannel);
 
-      // Set the general channel as current, or the first one if it doesn't exist
       const generalChannel = fetchedWorkspace.channels.find(
         (c) => c.channel_name === "general"
       );
@@ -231,7 +234,25 @@ function App() {
     socket.current.emit("sendMessage", {
       content: messageText,
       channelId: currentChannelId,
-      userId: user.id,
+      workspaceId: currentWorkspaceId,
+    });
+  };
+
+  const handleEditMessage = (messageId, content) => {
+    if (!socket.current || !currentWorkspaceId) return;
+    socket.current.emit("editMessage", {
+      messageId,
+      content,
+      channelId: currentChannelId,
+      workspaceId: currentWorkspaceId,
+    });
+  };
+
+  const handleDeleteMessage = (messageId) => {
+    if (!socket.current || !currentWorkspaceId) return;
+    socket.current.emit("deleteMessage", {
+      messageId,
+      channelId: currentChannelId,
       workspaceId: currentWorkspaceId,
     });
   };
@@ -246,9 +267,7 @@ function App() {
         channelName: sanitizedName,
       });
       const newChannel = res.data;
-      // Re-fetch workspace data to get the updated channel list
       await fetchWorkspaceData(currentWorkspaceId);
-      // Switch to the new channel
       setCurrentChannelId(newChannel.channel_id);
     } catch (error) {
       setToast({
@@ -305,6 +324,8 @@ function App() {
         channel={currentChannel}
         messages={messagesForCurrentChannel}
         onSendMessage={handleSendMessage}
+        onEditMessage={handleEditMessage}
+        onDeleteMessage={handleDeleteMessage}
         user={user}
       />
 

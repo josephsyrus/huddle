@@ -1,6 +1,7 @@
 const db = require("../config/database");
 const { nanoid } = require("nanoid");
 const { isValidString, LIMITS } = require("../utils/validators");
+const { formatMessage } = require("./messageController");
 
 const getWorkspaces = async (req, res) => {
   try {
@@ -222,9 +223,8 @@ const getWorkspaceData = async (req, res) => {
     );
     const channels = channelsResult.rows;
 
-    // Fetch messages for all channels in the workspace
     const messagesResult = await db.query(
-      `SELECT m.message_id, m.content, m.channel_id, m.sent_at, u.username
+      `SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username
              FROM messages m
              JOIN users u ON m.user_id = u.user_id
              WHERE m.channel_id IN (SELECT channel_id FROM channels WHERE workspace_id = $1)
@@ -232,18 +232,12 @@ const getWorkspaceData = async (req, res) => {
       [workspaceId]
     );
 
-    // Group messages by channel_id
     const messagesByChannel = {};
     messagesResult.rows.forEach((msg) => {
       if (!messagesByChannel[msg.channel_id]) {
         messagesByChannel[msg.channel_id] = [];
       }
-      messagesByChannel[msg.channel_id].push({
-        id: msg.message_id,
-        text: msg.content,
-        userId: msg.username,
-        createdAt: msg.sent_at,
-      });
+      messagesByChannel[msg.channel_id].push(formatMessage(msg, msg.username));
     });
 
     const response = {

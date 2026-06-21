@@ -366,6 +366,83 @@ body {
   margin-top: 0.25rem;
 }
 
+.message-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.message-item:hover .message-actions {
+  opacity: 1;
+}
+.message-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+.message-actions button:hover {
+  background-color: var(--message-hover-bg);
+}
+.message-actions .icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--text-dark);
+}
+.message-actions button:hover .icon {
+  color: var(--text-light);
+}
+
+.message-deleted {
+  font-style: italic;
+  color: var(--text-dark);
+}
+.message-edited {
+  font-size: 0.7rem;
+  color: var(--text-dark);
+}
+
+.message-edit {
+  margin-top: 0.25rem;
+}
+.message-edit-input {
+  width: 100%;
+  background-color: var(--main-input-bg);
+  color: var(--text-white);
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--sidebar-input-border);
+}
+.message-edit-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--purple-accent);
+}
+.message-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.message-edit-save,
+.message-edit-cancel {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.25rem;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.message-edit-save {
+  background-color: var(--purple-accent);
+  color: var(--text-white);
+}
+.message-edit-cancel {
+  background-color: var(--main-input-bg);
+  color: var(--text-light);
+}
+
 .chat-input-area {
   padding: 1rem;
   border-top: 1px solid var(--main-border);

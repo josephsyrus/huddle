@@ -3,7 +3,15 @@ import ChatHeader from "./ChatHeader";
 import Message from "./Message";
 import { SendIcon } from "../ui/Icons";
 
-const Chat = ({ channel, messages, onSendMessage, user, workspace }) => {
+const Chat = ({
+  channel,
+  messages,
+  onSendMessage,
+  onEditMessage,
+  onDeleteMessage,
+  user,
+  workspace,
+}) => {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
 
@@ -33,7 +41,13 @@ const Chat = ({ channel, messages, onSendMessage, user, workspace }) => {
           messages.length > 0 ? (
             <div>
               {messages.map((msg) => (
-                <Message key={msg.id} message={msg} />
+                <Message
+                  key={msg.id}
+                  message={msg}
+                  user={user}
+                  onEdit={onEditMessage}
+                  onDelete={onDeleteMessage}
+                />
               ))}
               <div ref={messagesEndRef} />
             </div>
