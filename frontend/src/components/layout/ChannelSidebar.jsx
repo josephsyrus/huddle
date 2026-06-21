@@ -146,7 +146,7 @@ const ChannelSidebar = ({
                       <li
                         key={member.user_id}
                         className={`member-item ${isSelf ? "" : "clickable"}`}
-                        onClick={() => !isSelf && onOpenDm(member.user_id)}
+                        onClick={() => !isSelf && onOpenDm(member)}
                         title={isSelf ? undefined : `Message ${member.username}`}
                       >
                         <span

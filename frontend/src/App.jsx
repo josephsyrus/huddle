@@ -32,6 +32,7 @@ function App() {
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineUsers, setOnlineUsers] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({});
+  const [draftDm, setDraftDm] = useState(null);
   const socket = useRef(null);
   const currentChannelIdRef = useRef(null);
   const currentWorkspaceIdRef = useRef(null);
@@ -175,6 +176,7 @@ function App() {
 
   useEffect(() => {
     currentWorkspaceIdRef.current = currentWorkspaceId;
+    setDraftDm(null);
     if (socket.current && currentWorkspaceId) {
       socket.current.emit("joinWorkspace", currentWorkspaceId);
       fetchWorkspaceData(currentWorkspaceId);
@@ -343,9 +345,56 @@ function App() {
     }
   };
 
-  const handleSendMessage = (messageText) => {
-    if (!socket.current || !user || !currentChannelId || !currentWorkspaceId)
+  const handleSendMessage = async (messageText) => {
+    if (!socket.current || !user || !currentWorkspaceId) return;
+
+    if (draftDm) {
+      try {
+        const res = await api.post(`/workspaces/${currentWorkspaceId}/dm`, {
+          userId: draftDm.otherUserId,
+        });
+        const channelId = res.data.channel_id;
+        setWorkspaces((prev) => {
+          const ws = prev[currentWorkspaceId];
+          if (!ws) return prev;
+          const dms = ws.dms || [];
+          if (dms.some((d) => d.channel_id === channelId)) return prev;
+          return {
+            ...prev,
+            [currentWorkspaceId]: {
+              ...ws,
+              dms: [
+                ...dms,
+                {
+                  channel_id: channelId,
+                  channel_name: draftDm.otherUsername,
+                  otherUsername: draftDm.otherUsername,
+                  otherUserId: draftDm.otherUserId,
+                  isDm: true,
+                },
+              ],
+            },
+          };
+        });
+        setMessages((prev) =>
+          prev[channelId] ? prev : { ...prev, [channelId]: [] }
+        );
+        setDraftDm(null);
+        setCurrentChannelId(channelId);
+        socket.current.emit("sendMessage", {
+          content: messageText,
+          channelId,
+          workspaceId: currentWorkspaceId,
+        });
+      } catch (error) {
+        setToast({
+          message: error.response?.data?.message || "Could not send message.",
+        });
+      }
       return;
+    }
+
+    if (!currentChannelId) return;
     socket.current.emit("sendMessage", {
       content: messageText,
       channelId: currentChannelId,
@@ -372,20 +421,18 @@ function App() {
     });
   };
 
-  const handleOpenDm = async (targetUserId) => {
+  const handleOpenDm = (member) => {
     if (!currentWorkspaceId) return;
-    try {
-      const res = await api.post(`/workspaces/${currentWorkspaceId}/dm`, {
-        userId: targetUserId,
-      });
-      await fetchWorkspaceData(currentWorkspaceId);
-      setCurrentChannelId(res.data.channel_id);
-      setPopups({ ...popups, user: false });
-    } catch (error) {
-      setToast({
-        message: error.response?.data?.message || "Could not open DM.",
-      });
+    const ws = workspaces[currentWorkspaceId];
+    const existing = ws?.dms?.find((d) => d.otherUserId === member.user_id);
+    if (existing) {
+      setDraftDm(null);
+      setCurrentChannelId(existing.channel_id);
+    } else {
+      setCurrentChannelId(null);
+      setDraftDm({ otherUserId: member.user_id, otherUsername: member.username });
     }
+    setPopups({ ...popups, user: false });
   };
 
   const handleToggleReaction = (messageId, emoji) => {
@@ -462,12 +509,22 @@ function App() {
   const currentWorkspace = currentWorkspaceId
     ? workspaces[currentWorkspaceId]
     : null;
-  const currentChannel =
+  let currentChannel =
     currentWorkspace?.channels?.find(
       (c) => c.channel_id === currentChannelId
     ) ||
     currentWorkspace?.dms?.find((d) => d.channel_id === currentChannelId);
-  const messagesForCurrentChannel = messages[currentChannelId] || [];
+  if (!currentChannel && draftDm) {
+    currentChannel = {
+      isDm: true,
+      isDraft: true,
+      channel_name: draftDm.otherUsername,
+      otherUsername: draftDm.otherUsername,
+    };
+  }
+  const messagesForCurrentChannel = currentChannelId
+    ? messages[currentChannelId] || []
+    : [];
 
   return (
     <div className="app-container">
@@ -487,7 +544,10 @@ function App() {
       />
       <ChannelSidebar
         workspace={currentWorkspace}
-        onSelectChannel={(channel) => setCurrentChannelId(channel.channel_id)}
+        onSelectChannel={(channel) => {
+          setDraftDm(null);
+          setCurrentChannelId(channel.channel_id);
+        }}
         onAddChannel={() => setPopups({ ...popups, createChannel: true })}
         currentChannelId={currentChannelId}
         user={user}
