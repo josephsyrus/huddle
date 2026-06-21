@@ -22,10 +22,11 @@ const createChannel = async (req, res) => {
       .json({ message: "You are not a member of this workspace." });
   }
 
+  const client = await db.pool.connect();
   try {
-    await db.query("BEGIN");
+    await client.query("BEGIN");
 
-    const newChannelResult = await db.query(
+    const newChannelResult = await client.query(
       "INSERT INTO channels (channel_name, workspace_id, is_private) VALUES ($1, $2, $3) RETURNING channel_id, channel_name, is_private",
       [channelName, workspaceId, !!isPrivate]
     );
@@ -36,20 +37,20 @@ const createChannel = async (req, res) => {
       const wanted = Array.from(
         new Set([userId, ...(Array.isArray(memberIds) ? memberIds : [])])
       );
-      const valid = await db.query(
+      const valid = await client.query(
         "SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = ANY($2)",
         [workspaceId, wanted]
       );
       memberRows = valid.rows;
       for (const row of memberRows) {
-        await db.query(
+        await client.query(
           "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
           [row.user_id, newChannel.channel_id]
         );
       }
     }
 
-    await db.query("COMMIT");
+    await client.query("COMMIT");
 
     const io = req.app.get("io");
     if (io) {
@@ -65,7 +66,7 @@ const createChannel = async (req, res) => {
 
     res.status(201).json(newChannel);
   } catch (error) {
-    await db.query("ROLLBACK");
+    await client.query("ROLLBACK");
     if (error.code === "23505") {
       return res.status(409).json({
         message: "A channel with this name already exists in the workspace.",
@@ -73,6 +74,8 @@ const createChannel = async (req, res) => {
     }
     console.error("Error creating channel:", error);
     res.status(500).json({ message: "Server error." });
+  } finally {
+    client.release();
   }
 };
 

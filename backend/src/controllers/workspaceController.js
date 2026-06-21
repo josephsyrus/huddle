@@ -46,38 +46,41 @@ const createWorkspace = async (req, res) => {
 
   const workspaceId = `ws_${nanoid(12)}`;
 
+  const client = await db.pool.connect();
   try {
-    await db.query("BEGIN");
+    await client.query("BEGIN");
 
-    const newWorkspaceResult = await db.query(
+    const newWorkspaceResult = await client.query(
       "INSERT INTO workspaces (workspace_id, workspace_name, owner_id) VALUES ($1, $2, $3) RETURNING workspace_id, workspace_name",
       [workspaceId, name, ownerId]
     );
     const newWorkspace = newWorkspaceResult.rows[0];
 
-    await db.query(
+    await client.query(
       "INSERT INTO workspace_members (user_id, workspace_id) VALUES ($1, $2)",
       [ownerId, workspaceId]
     );
 
-    const generalChannelResult = await db.query(
+    const generalChannelResult = await client.query(
       "INSERT INTO channels (channel_name, workspace_id) VALUES ($1, $2) RETURNING channel_id",
       ["general", workspaceId]
     );
     const generalChannelId = generalChannelResult.rows[0].channel_id;
 
-    await db.query(
+    await client.query(
       "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
       [ownerId, generalChannelId]
     );
 
-    await db.query("COMMIT");
+    await client.query("COMMIT");
 
     res.status(201).json(newWorkspace);
   } catch (error) {
-    await db.query("ROLLBACK");
+    await client.query("ROLLBACK");
     console.error("Error creating workspace:", error);
     res.status(500).json({ message: "Server error." });
+  } finally {
+    client.release();
   }
 };
 
@@ -90,7 +93,6 @@ const joinWorkspace = async (req, res) => {
   }
 
   try {
-    await db.query("BEGIN");
     const workspaceResult = await db.query(
       "SELECT workspace_id FROM workspaces WHERE workspace_id = $1",
       [workspaceId]
@@ -100,7 +102,7 @@ const joinWorkspace = async (req, res) => {
     }
 
     const memberResult = await db.query(
-      "SELECT * FROM workspace_members WHERE user_id = $1 AND workspace_id = $2",
+      "SELECT 1 FROM workspace_members WHERE user_id = $1 AND workspace_id = $2",
       [userId, workspaceId]
     );
     if (memberResult.rows.length > 0) {
@@ -108,31 +110,41 @@ const joinWorkspace = async (req, res) => {
         .status(409)
         .json({ message: "You are already a member of this workspace." });
     }
+  } catch (error) {
+    console.error("Error joining workspace:", error);
+    return res.status(500).json({ message: "Server error." });
+  }
 
-    await db.query(
+  const client = await db.pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
       "INSERT INTO workspace_members (user_id, workspace_id) VALUES ($1, $2)",
       [userId, workspaceId]
     );
 
-    const generalChannelResult = await db.query(
+    const generalChannelResult = await client.query(
       "SELECT channel_id FROM channels WHERE workspace_id = $1 AND channel_name = $2",
       [workspaceId, "general"]
     );
     if (generalChannelResult.rows.length > 0) {
       const generalChannelId = generalChannelResult.rows[0].channel_id;
-      await db.query(
+      await client.query(
         "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
         [userId, generalChannelId]
       );
     }
 
-    await db.query("COMMIT");
+    await client.query("COMMIT");
 
     res.status(200).json({ message: "Successfully joined workspace." });
   } catch (error) {
-    await db.query("ROLLBACK");
+    await client.query("ROLLBACK");
     console.error("Error joining workspace:", error);
     res.status(500).json({ message: "Server error." });
+  } finally {
+    client.release();
   }
 };
 

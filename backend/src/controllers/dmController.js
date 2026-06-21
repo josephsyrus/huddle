@@ -34,17 +34,34 @@ const openDm = async (req, res) => {
     if (channelResult.rows.length > 0) {
       channelId = channelResult.rows[0].channel_id;
     } else {
-      await db.query("BEGIN");
-      const created = await db.query(
-        "INSERT INTO channels (channel_name, workspace_id, is_dm) VALUES ($1, $2, TRUE) RETURNING channel_id",
-        [dmName, workspaceId]
-      );
-      channelId = created.rows[0].channel_id;
-      await db.query(
-        "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2), ($3, $2)",
-        [userId, channelId, targetUserId]
-      );
-      await db.query("COMMIT");
+      const client = await db.pool.connect();
+      try {
+        await client.query("BEGIN");
+        const created = await client.query(
+          "INSERT INTO channels (channel_name, workspace_id, is_dm) VALUES ($1, $2, TRUE) RETURNING channel_id",
+          [dmName, workspaceId]
+        );
+        channelId = created.rows[0].channel_id;
+        await client.query(
+          "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2), ($3, $2)",
+          [userId, channelId, targetUserId]
+        );
+        await client.query("COMMIT");
+      } catch (txError) {
+        await client.query("ROLLBACK");
+        if (txError.code === "23505") {
+          const existing = await db.query(
+            "SELECT channel_id FROM channels WHERE workspace_id = $1 AND channel_name = $2 AND is_dm = TRUE",
+            [workspaceId, dmName]
+          );
+          if (existing.rows.length === 0) throw txError;
+          channelId = existing.rows[0].channel_id;
+        } else {
+          throw txError;
+        }
+      } finally {
+        client.release();
+      }
     }
 
     const otherUser = await db.query(
@@ -68,7 +85,6 @@ const openDm = async (req, res) => {
       other_username: otherUser.rows[0].username,
     });
   } catch (error) {
-    await db.query("ROLLBACK").catch(() => {});
     console.error("Error opening DM:", error);
     res.status(500).json({ message: "Server error." });
   }
