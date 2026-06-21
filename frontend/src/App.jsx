@@ -60,8 +60,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      const SOCKET_URL =
-        import.meta.env.VITE_API_URL || "http://localhost:3001";
+      const SOCKET_URL = import.meta.env.VITE_API_URL || undefined;
       socket.current = io(SOCKET_URL, {
         auth: { token: localStorage.getItem("token") },
       });
