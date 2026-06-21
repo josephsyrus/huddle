@@ -63,6 +63,12 @@ function App() {
         auth: { token: localStorage.getItem("token") },
       });
 
+      socket.current.on("connect", () => {
+        if (currentWorkspaceIdRef.current) {
+          socket.current.emit("joinWorkspace", currentWorkspaceIdRef.current);
+        }
+      });
+
       socket.current.on("receiveMessage", (newMessage) => {
         setMessages((prev) => ({
           ...prev,
