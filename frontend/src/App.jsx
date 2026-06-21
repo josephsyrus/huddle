@@ -598,6 +598,8 @@ function App() {
         onlineUserIds={onlineUsers[currentWorkspaceId] || []}
         unreadCounts={unreadCounts}
         onOpenDm={handleOpenDm}
+        onManageMembers={() => setPopups({ ...popups, manageMembers: true })}
+        draftDmUserId={draftDm?.otherUserId}
         isUserPopupVisible={popups.user}
         onLogout={handleLogout}
         onUserClick={() => setPopups({ ...popups, user: !popups.user })}
@@ -618,7 +620,6 @@ function App() {
         onSearch={handleSearch}
         onJumpToResult={(result) => setCurrentChannelId(result.channelId)}
         resolveChannelName={resolveChannelName}
-        onManageMembers={() => setPopups({ ...popups, manageMembers: true })}
         onTyping={handleTyping}
         typingUsers={(typingUsers[currentChannelId] || []).filter(
           (u) => u !== user.username

@@ -5,6 +5,7 @@ import {
   AddUserIcon,
   ChevronDownIcon,
   LockIcon,
+  UsersIcon,
 } from "../ui/Icons";
 import UserPopup from "../ui/UserPopup";
 import WorkspaceSettingsMenu from "../ui/WorkspaceSettingsMenu";
@@ -19,6 +20,8 @@ const ChannelSidebar = ({
   onlineUserIds = [],
   unreadCounts = {},
   onOpenDm,
+  onManageMembers,
+  draftDmUserId,
   isUserPopupVisible,
   onLogout,
   onInviteClick,
@@ -85,17 +88,30 @@ const ChannelSidebar = ({
               <ul className="channel-list">
                 {workspace.channels?.map((channel) => {
                   const unread = unreadCounts[channel.channel_id] || 0;
+                  const isActive = currentChannelId === channel.channel_id;
                   return (
                     <li
                       key={channel.channel_id}
-                      className={`channel-item ${
-                        currentChannelId === channel.channel_id ? "active" : ""
-                      }`}
+                      className={`channel-item ${isActive ? "active" : ""}`}
                       onClick={() => onSelectChannel(channel)}
                     >
                       {channel.is_private ? <LockIcon /> : <HashIcon />}
                       <span>{channel.channel_name}</span>
-                      {unread > 0 && <span className="unread-badge">{unread}</span>}
+                      {isActive && channel.is_private && (
+                        <button
+                          className="channel-manage-btn"
+                          title="Manage members"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onManageMembers();
+                          }}
+                        >
+                          <UsersIcon />
+                        </button>
+                      )}
+                      {unread > 0 && (
+                        <span className="unread-badge">{unread}</span>
+                      )}
                     </li>
                   );
                 })}
@@ -104,48 +120,26 @@ const ChannelSidebar = ({
                 + Create channel
               </button>
             </div>
-            {workspace.dms?.length > 0 && (
-              <div className="sidebar-section">
-                <h2>DIRECT MESSAGES</h2>
-                <ul className="channel-list">
-                  {workspace.dms.map((dm) => {
-                    const unread = unreadCounts[dm.channel_id] || 0;
-                    return (
-                      <li
-                        key={dm.channel_id}
-                        className={`channel-item ${
-                          currentChannelId === dm.channel_id ? "active" : ""
-                        }`}
-                        onClick={() => onSelectChannel(dm)}
-                      >
-                        <span
-                          className={`status-dot ${
-                            onlineUserIds.includes(dm.otherUserId)
-                              ? "online"
-                              : "offline"
-                          }`}
-                        />
-                        <span>{dm.otherUsername}</span>
-                        {unread > 0 && (
-                          <span className="unread-badge">{unread}</span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
             {workspace.members?.length > 0 && (
               <div className="sidebar-section">
-                <h2>MEMBERS</h2>
+                <h2>DIRECT MESSAGES</h2>
                 <ul className="member-list">
                   {workspace.members.map((member) => {
                     const isOnline = onlineUserIds.includes(member.user_id);
                     const isSelf = member.user_id === user?.id;
+                    const dm = workspace.dms?.find(
+                      (d) => d.otherUserId === member.user_id
+                    );
+                    const unread = dm ? unreadCounts[dm.channel_id] || 0 : 0;
+                    const isActive =
+                      (dm && currentChannelId === dm.channel_id) ||
+                      (!dm && draftDmUserId === member.user_id);
                     return (
                       <li
                         key={member.user_id}
-                        className={`member-item ${isSelf ? "" : "clickable"}`}
+                        className={`member-item ${isSelf ? "" : "clickable"} ${
+                          isActive ? "active" : ""
+                        }`}
                         onClick={() => !isSelf && onOpenDm(member)}
                         title={isSelf ? undefined : `Message ${member.username}`}
                       >
@@ -158,6 +152,9 @@ const ChannelSidebar = ({
                           {member.username}
                           {isSelf && " (you)"}
                         </span>
+                        {unread > 0 && (
+                          <span className="unread-badge">{unread}</span>
+                        )}
                       </li>
                     );
                   })}

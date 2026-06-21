@@ -14,7 +14,6 @@ const Chat = ({
   onSearch,
   onJumpToResult,
   resolveChannelName,
-  onManageMembers,
   onTyping,
   typingUsers,
   user,
@@ -67,7 +66,6 @@ const Chat = ({
         onSearch={onSearch}
         onJumpToResult={onJumpToResult}
         resolveChannelName={resolveChannelName}
-        onManageMembers={onManageMembers}
       />
       <div className="messages-area">
         {!workspace ? (

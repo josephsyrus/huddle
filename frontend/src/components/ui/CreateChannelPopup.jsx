@@ -42,7 +42,7 @@ const CreateChannelPopup = ({ members = [], currentUserId, onClose, onCreate }) 
               checked={isPrivate}
               onChange={(e) => setIsPrivate(e.target.checked)}
             />
-            <span>Private channel — only chosen members can access it</span>
+            <span>Make this a private channel</span>
           </label>
 
           {isPrivate && (
