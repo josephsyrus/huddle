@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useLayoutEffect, useRef } from "react";
 import ChatHeader from "./ChatHeader";
 import Message from "./Message";
 import TypingIndicator from "./TypingIndicator";
@@ -7,6 +7,8 @@ import { SendIcon } from "../ui/Icons";
 const Chat = ({
   channel,
   messages,
+  hasMore,
+  onLoadOlder,
   onSendMessage,
   onEditMessage,
   onDeleteMessage,
@@ -20,8 +22,15 @@ const Chat = ({
   workspace,
 }) => {
   const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = useRef(null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const messagesAreaRef = useRef(null);
   const typingTimeout = useRef(null);
+  const prevChannelIdRef = useRef(null);
+  const prependRef = useRef(null);
+  const loadingRef = useRef(false);
+  const nearBottomRef = useRef(true);
+
+  const channelId = channel?.channel_id;
 
   const channelLabel = channel
     ? channel.isDm
@@ -29,9 +38,51 @@ const Chat = ({
       : `#${channel.channel_name}`
     : "";
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typingUsers]);
+  const handleScroll = () => {
+    const el = messagesAreaRef.current;
+    if (!el) return;
+    nearBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+
+    if (
+      el.scrollTop <= 80 &&
+      hasMore &&
+      !loadingRef.current &&
+      messages.length > 0
+    ) {
+      loadingRef.current = true;
+      setLoadingOlder(true);
+      prependRef.current = { height: el.scrollHeight, top: el.scrollTop };
+      Promise.resolve(onLoadOlder?.()).finally(() => {
+        loadingRef.current = false;
+        setLoadingOlder(false);
+      });
+    }
+  };
+
+  useLayoutEffect(() => {
+    const el = messagesAreaRef.current;
+    if (!el) return;
+
+    if (prevChannelIdRef.current !== channelId) {
+      prevChannelIdRef.current = channelId;
+      prependRef.current = null;
+      nearBottomRef.current = true;
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+
+    if (prependRef.current) {
+      const { height, top } = prependRef.current;
+      prependRef.current = null;
+      el.scrollTop = top + (el.scrollHeight - height);
+      return;
+    }
+
+    if (nearBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages, channelId]);
 
   const stopTyping = () => {
     clearTimeout(typingTimeout.current);
@@ -67,7 +118,7 @@ const Chat = ({
         onJumpToResult={onJumpToResult}
         resolveChannelName={resolveChannelName}
       />
-      <div className="messages-area">
+      <div className="messages-area" ref={messagesAreaRef} onScroll={handleScroll}>
         {!workspace ? (
           <div className="placeholder-container">
             <p className="placeholder-text">
@@ -77,6 +128,9 @@ const Chat = ({
         ) : channel ? (
           messages.length > 0 ? (
             <div>
+              {loadingOlder && (
+                <div className="messages-loading">Loading earlier messages…</div>
+              )}
               {messages.map((msg) => (
                 <Message
                   key={msg.id}
@@ -87,7 +141,6 @@ const Chat = ({
                   onReact={onToggleReaction}
                 />
               ))}
-              <div ref={messagesEndRef} />
             </div>
           ) : (
             <div className="placeholder-container">

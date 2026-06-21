@@ -30,6 +30,7 @@ function App() {
   const [currentWorkspaceId, setCurrentWorkspaceId] = useState(null);
   const [currentChannelId, setCurrentChannelId] = useState(null);
   const [messages, setMessages] = useState({});
+  const [hasMoreMessages, setHasMoreMessages] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineUsers, setOnlineUsers] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({});
@@ -288,6 +289,15 @@ function App() {
       });
       setMessages(messagesByChannel);
 
+      const moreFlags = {};
+      fetchedWorkspace.channels.forEach((c) => {
+        moreFlags[c.channel_id] = (c.messages?.length || 0) >= 30;
+      });
+      (fetchedWorkspace.dms || []).forEach((d) => {
+        moreFlags[d.channel_id] = (d.messages?.length || 0) >= 30;
+      });
+      setHasMoreMessages(moreFlags);
+
       const counts = {};
       fetchedWorkspace.channels.forEach((c) => {
         counts[c.channel_id] = c.unread || 0;
@@ -489,6 +499,31 @@ function App() {
     });
   };
 
+  const loadOlderMessages = async (channelId) => {
+    const wsId = currentWorkspaceIdRef.current;
+    const existing = messages[channelId] || [];
+    if (!wsId || !channelId || existing.length === 0) return;
+
+    try {
+      const res = await api.get(
+        `/workspaces/${wsId}/channels/${channelId}/messages`,
+        { params: { before: existing[0].id, limit: 30 } }
+      );
+      const older = res.data.messages || [];
+      if (older.length > 0) {
+        setMessages((prev) => {
+          const current = prev[channelId] || [];
+          const seen = new Set(current.map((m) => m.id));
+          const merged = [...older.filter((m) => !seen.has(m.id)), ...current];
+          return { ...prev, [channelId]: merged };
+        });
+      }
+      setHasMoreMessages((prev) => ({ ...prev, [channelId]: !!res.data.hasMore }));
+    } catch (error) {
+      console.error("Error loading older messages:", error);
+    }
+  };
+
   const markChannelRead = (channelId) => {
     const wsId = currentWorkspaceIdRef.current;
     if (!wsId || !channelId) return;
@@ -613,6 +648,8 @@ function App() {
         workspace={currentWorkspace}
         channel={currentChannel}
         messages={messagesForCurrentChannel}
+        hasMore={!!hasMoreMessages[currentChannelId]}
+        onLoadOlder={() => loadOlderMessages(currentChannelId)}
         onSendMessage={handleSendMessage}
         onEditMessage={handleEditMessage}
         onDeleteMessage={handleDeleteMessage}
