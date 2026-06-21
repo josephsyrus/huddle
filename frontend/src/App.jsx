@@ -29,6 +29,7 @@ function App() {
   const [currentChannelId, setCurrentChannelId] = useState(null);
   const [messages, setMessages] = useState({});
   const [typingUsers, setTypingUsers] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState({});
   const socket = useRef(null);
   const [toast, setToast] = useState(null);
   const [popups, setPopups] = useState({
@@ -99,6 +100,10 @@ function App() {
         }));
       });
 
+      socket.current.on("presenceUpdate", ({ workspaceId, onlineUserIds }) => {
+        setOnlineUsers((prev) => ({ ...prev, [workspaceId]: onlineUserIds }));
+      });
+
       return () => {
         socket.current.disconnect();
       };
@@ -155,6 +160,7 @@ function App() {
           name: fetchedWorkspace.workspace_name,
           owner_id: fetchedWorkspace.owner_id,
           channels: fetchedWorkspace.channels,
+          members: fetchedWorkspace.members,
         },
       }));
 
@@ -334,6 +340,7 @@ function App() {
         onCreateChannel={handleCreateChannel}
         currentChannelId={currentChannelId}
         user={user}
+        onlineUserIds={onlineUsers[currentWorkspaceId] || []}
         isUserPopupVisible={popups.user}
         onLogout={handleLogout}
         onUserClick={() => setPopups({ ...popups, user: !popups.user })}

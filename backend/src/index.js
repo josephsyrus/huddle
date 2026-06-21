@@ -57,9 +57,40 @@ io.use((socket, next) => {
   }
 });
 
+const presence = new Map();
+
+const addPresence = (workspaceId, userId) => {
+  if (!presence.has(workspaceId)) presence.set(workspaceId, new Map());
+  const users = presence.get(workspaceId);
+  users.set(userId, (users.get(userId) || 0) + 1);
+};
+
+const removePresence = (workspaceId, userId) => {
+  const users = presence.get(workspaceId);
+  if (!users) return;
+  const count = (users.get(userId) || 0) - 1;
+  if (count <= 0) users.delete(userId);
+  else users.set(userId, count);
+};
+
+const emitPresence = (workspaceId) => {
+  const users = presence.get(workspaceId);
+  io.to(workspaceId).emit("presenceUpdate", {
+    workspaceId,
+    onlineUserIds: users ? [...users.keys()] : [],
+  });
+};
+
 io.on("connection", (socket) => {
+  socket.data.workspaces = new Set();
+
   socket.on("joinWorkspace", (workspaceId) => {
     socket.join(workspaceId);
+    if (!socket.data.workspaces.has(workspaceId)) {
+      socket.data.workspaces.add(workspaceId);
+      addPresence(workspaceId, socket.user.id);
+    }
+    emitPresence(workspaceId);
   });
 
   socket.on("sendMessage", async (data) => {
@@ -121,7 +152,12 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {});
+  socket.on("disconnect", () => {
+    for (const workspaceId of socket.data.workspaces) {
+      removePresence(workspaceId, socket.user.id);
+      emitPresence(workspaceId);
+    }
+  });
 });
 
 initDb()

@@ -223,6 +223,13 @@ const getWorkspaceData = async (req, res) => {
     );
     const channels = channelsResult.rows;
 
+    const membersResult = await db.query(
+      `SELECT u.user_id, u.username FROM users u
+       JOIN workspace_members wm ON u.user_id = wm.user_id
+       WHERE wm.workspace_id = $1`,
+      [workspaceId]
+    );
+
     const messagesResult = await db.query(
       `SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username
              FROM messages m
@@ -242,6 +249,7 @@ const getWorkspaceData = async (req, res) => {
 
     const response = {
       ...workspace,
+      members: membersResult.rows,
       channels: channels.map((c) => ({
         ...c,
         messages: messagesByChannel[c.channel_id] || [],

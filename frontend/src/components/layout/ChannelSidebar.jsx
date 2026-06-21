@@ -10,6 +10,7 @@ const ChannelSidebar = ({
   onUserClick,
   currentChannelId,
   user,
+  onlineUserIds = [],
   isUserPopupVisible,
   onLogout,
   onInviteClick,
@@ -108,6 +109,26 @@ const ChannelSidebar = ({
                 />
               </form>
             </div>
+            {workspace.members?.length > 0 && (
+              <div className="sidebar-section">
+                <h2>MEMBERS</h2>
+                <ul className="member-list">
+                  {workspace.members.map((member) => {
+                    const isOnline = onlineUserIds.includes(member.user_id);
+                    return (
+                      <li key={member.user_id} className="member-item">
+                        <span
+                          className={`status-dot ${
+                            isOnline ? "online" : "offline"
+                          }`}
+                        />
+                        <span>{member.username}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </>
         )}
       </div>
