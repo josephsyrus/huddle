@@ -1,5 +1,12 @@
 const db = require("../config/database");
 const { isValidString, LIMITS } = require("../utils/validators");
+const {
+  formatMessage,
+  canAccessChannel,
+  getReactionsByMessageIds,
+} = require("./messageController");
+
+const MESSAGE_PAGE_SIZE = 30;
 
 const createChannel = async (req, res) => {
   const { workspaceId } = req.params;
@@ -194,6 +201,54 @@ const updateChannelMembers = async (req, res) => {
   }
 };
 
+const getMessages = async (req, res) => {
+  const { channelId } = req.params;
+  const userId = req.user.id;
+  const limit = Math.min(
+    parseInt(req.query.limit, 10) || MESSAGE_PAGE_SIZE,
+    50
+  );
+  const before = req.query.before ? parseInt(req.query.before, 10) : null;
+
+  try {
+    if (!(await canAccessChannel(channelId, userId))) {
+      return res.status(403).json({ message: "Not allowed." });
+    }
+
+    const params = [channelId, limit];
+    let cursor = "";
+    if (before) {
+      params.push(before);
+      cursor = "AND m.message_id < $3";
+    }
+
+    const result = await db.query(
+      `SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username
+       FROM messages m
+       JOIN users u ON m.user_id = u.user_id
+       WHERE m.channel_id = $1 ${cursor}
+       ORDER BY m.message_id DESC
+       LIMIT $2`,
+      params
+    );
+
+    const rows = result.rows.reverse();
+    const reactionsByMessage = await getReactionsByMessageIds(
+      rows.map((r) => r.message_id)
+    );
+    const messages = rows.map((r) => {
+      const formatted = formatMessage(r, r.username);
+      formatted.reactions = reactionsByMessage[formatted.id] || [];
+      return formatted;
+    });
+
+    res.json({ messages, hasMore: result.rows.length === limit });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
 const markRead = async (req, res) => {
   const { channelId } = req.params;
   const userId = req.user.id;
@@ -214,6 +269,7 @@ const markRead = async (req, res) => {
 
 module.exports = {
   createChannel,
+  getMessages,
   markRead,
   getChannelMembers,
   updateChannelMembers,

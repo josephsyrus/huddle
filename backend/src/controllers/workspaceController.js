@@ -1,7 +1,9 @@
 const db = require("../config/database");
 const { nanoid } = require("nanoid");
 const { isValidString, LIMITS } = require("../utils/validators");
-const { formatMessage } = require("./messageController");
+const { formatMessage, getReactionsByMessageIds } = require("./messageController");
+
+const MESSAGE_PAGE_SIZE = 30;
 
 const getAccessibleChannelIds = async (workspaceId, userId) => {
   const result = await db.query(
@@ -269,33 +271,22 @@ const getWorkspaceData = async (req, res) => {
     const accessibleIds = await getAccessibleChannelIds(workspaceId, userId);
 
     const messagesResult = await db.query(
-      `SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username
-             FROM messages m
-             JOIN users u ON m.user_id = u.user_id
-             WHERE m.channel_id = ANY($1)
-             ORDER BY m.sent_at ASC`,
-      [accessibleIds]
+      `SELECT message_id, content, channel_id, sent_at, edited_at, is_deleted, username
+       FROM (
+         SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username,
+                ROW_NUMBER() OVER (PARTITION BY m.channel_id ORDER BY m.message_id DESC) AS rn
+         FROM messages m
+         JOIN users u ON m.user_id = u.user_id
+         WHERE m.channel_id = ANY($1)
+       ) sub
+       WHERE rn <= $2
+       ORDER BY sent_at ASC`,
+      [accessibleIds, MESSAGE_PAGE_SIZE]
     );
 
-    const reactionsResult = await db.query(
-      `SELECT mr.message_id, mr.emoji, COUNT(*)::int AS count, ARRAY_AGG(mr.user_id) AS user_ids
-       FROM message_reactions mr
-       WHERE mr.message_id IN (
-         SELECT message_id FROM messages WHERE channel_id = ANY($1)
-       )
-       GROUP BY mr.message_id, mr.emoji`,
-      [accessibleIds]
+    const reactionsByMessage = await getReactionsByMessageIds(
+      messagesResult.rows.map((m) => m.message_id)
     );
-
-    const reactionsByMessage = {};
-    reactionsResult.rows.forEach((r) => {
-      if (!reactionsByMessage[r.message_id]) reactionsByMessage[r.message_id] = [];
-      reactionsByMessage[r.message_id].push({
-        emoji: r.emoji,
-        count: r.count,
-        userIds: r.user_ids,
-      });
-    });
 
     const messagesByChannel = {};
     messagesResult.rows.forEach((msg) => {

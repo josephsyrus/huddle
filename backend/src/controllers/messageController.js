@@ -117,6 +117,26 @@ const deleteMessage = async ({ messageId, userId }) => {
   }
 };
 
+const getReactionsByMessageIds = async (messageIds) => {
+  if (!messageIds.length) return {};
+  const result = await db.query(
+    `SELECT message_id, emoji, COUNT(*)::int AS count, ARRAY_AGG(user_id) AS user_ids
+     FROM message_reactions WHERE message_id = ANY($1)
+     GROUP BY message_id, emoji`,
+    [messageIds]
+  );
+  const byMessage = {};
+  result.rows.forEach((r) => {
+    if (!byMessage[r.message_id]) byMessage[r.message_id] = [];
+    byMessage[r.message_id].push({
+      emoji: r.emoji,
+      count: r.count,
+      userIds: r.user_ids,
+    });
+  });
+  return byMessage;
+};
+
 const getReactions = async (messageId) => {
   const result = await db.query(
     `SELECT emoji, COUNT(*)::int AS count, ARRAY_AGG(user_id) AS user_ids
@@ -174,5 +194,7 @@ module.exports = {
   deleteMessage,
   toggleReaction,
   getReactions,
+  getReactionsByMessageIds,
+  canAccessChannel,
   formatMessage,
 };

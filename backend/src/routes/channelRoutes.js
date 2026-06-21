@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router({ mergeParams: true });
 const {
   createChannel,
+  getMessages,
   markRead,
   getChannelMembers,
   updateChannelMembers,
@@ -11,6 +12,8 @@ const { protect } = require("../middleware/authMiddleware");
 router.use(protect);
 
 router.route("/").post(createChannel);
+
+router.get("/:channelId/messages", getMessages);
 
 router.post("/:channelId/read", markRead);
 
