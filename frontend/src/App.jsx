@@ -13,6 +13,7 @@ import JoinWorkspacePopup from "./components/ui/JoinWorkspacePopup";
 import ConfirmDeletePopup from "./components/ui/ConfirmDeletePopup";
 import RenameWorkspacePopup from "./components/ui/RenameWorkspacePopup";
 import CreateChannelPopup from "./components/ui/CreateChannelPopup";
+import ManageMembersPopup from "./components/ui/ManageMembersPopup";
 import Toast from "./components/ui/Toast";
 
 const decodeToken = (token) => {
@@ -46,6 +47,7 @@ function App() {
     confirmDelete: false,
     renameWorkspace: false,
     createChannel: false,
+    manageMembers: false,
   });
 
   useEffect(() => {
@@ -179,6 +181,12 @@ function App() {
         });
       });
 
+      socket.current.on("channelMembersChanged", ({ workspaceId }) => {
+        if (workspaceId === currentWorkspaceIdRef.current) {
+          fetchWorkspaceData(workspaceId);
+        }
+      });
+
       socket.current.on("memberJoined", ({ workspaceId, member }) => {
         setWorkspaces((prev) => {
           const ws = prev[workspaceId];
@@ -289,15 +297,27 @@ function App() {
       });
       setUnreadCounts(counts);
 
-      const generalChannel = fetchedWorkspace.channels.find(
-        (c) => c.channel_name === "general"
-      );
-      if (generalChannel) {
-        setCurrentChannelId(generalChannel.channel_id);
-      } else if (fetchedWorkspace.channels.length > 0) {
-        setCurrentChannelId(fetchedWorkspace.channels[0].channel_id);
+      const accessibleIds = [
+        ...fetchedWorkspace.channels.map((c) => c.channel_id),
+        ...dms.map((d) => d.channel_id),
+      ];
+      const keepCurrent =
+        currentChannelIdRef.current &&
+        accessibleIds.includes(currentChannelIdRef.current);
+
+      if (keepCurrent) {
+        setCurrentChannelId(currentChannelIdRef.current);
       } else {
-        setCurrentChannelId(null);
+        const generalChannel = fetchedWorkspace.channels.find(
+          (c) => c.channel_name === "general"
+        );
+        if (generalChannel) {
+          setCurrentChannelId(generalChannel.channel_id);
+        } else if (fetchedWorkspace.channels.length > 0) {
+          setCurrentChannelId(fetchedWorkspace.channels[0].channel_id);
+        } else {
+          setCurrentChannelId(null);
+        }
       }
     } catch (error) {
       console.error("Error fetching workspace data:", error);
@@ -598,6 +618,7 @@ function App() {
         onSearch={handleSearch}
         onJumpToResult={(result) => setCurrentChannelId(result.channelId)}
         resolveChannelName={resolveChannelName}
+        onManageMembers={() => setPopups({ ...popups, manageMembers: true })}
         onTyping={handleTyping}
         typingUsers={(typingUsers[currentChannelId] || []).filter(
           (u) => u !== user.username
@@ -654,6 +675,16 @@ function App() {
           currentUserId={user.id}
           onClose={() => setPopups({ ...popups, createChannel: false })}
           onCreate={handleCreateChannel}
+        />
+      )}
+      {popups.manageMembers && currentWorkspace && currentChannel?.is_private && (
+        <ManageMembersPopup
+          workspaceId={currentWorkspaceId}
+          channel={currentChannel}
+          members={currentWorkspace.members || []}
+          currentUserId={user.id}
+          onClose={() => setPopups({ ...popups, manageMembers: false })}
+          onError={(message) => setToast({ message })}
         />
       )}
     </div>

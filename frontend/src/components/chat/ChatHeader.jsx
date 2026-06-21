@@ -1,5 +1,5 @@
 import React from "react";
-import { HashIcon, UserIcon } from "../ui/Icons";
+import { HashIcon, UserIcon, LockIcon, UsersIcon } from "../ui/Icons";
 import SearchBar from "./SearchBar";
 
 const ChatHeader = ({
@@ -8,7 +8,16 @@ const ChatHeader = ({
   onSearch,
   onJumpToResult,
   resolveChannelName,
+  onManageMembers,
 }) => {
+  const channelIcon = channel?.isDm ? (
+    <UserIcon />
+  ) : channel?.is_private ? (
+    <LockIcon />
+  ) : (
+    <HashIcon />
+  );
+
   return (
     <div className="chat-header">
       {workspace ? (
@@ -16,8 +25,17 @@ const ChatHeader = ({
           <div className="chat-header-title">
             {channel ? (
               <>
-                {channel.isDm ? <UserIcon /> : <HashIcon />}
+                {channelIcon}
                 <h2>{channel.channel_name}</h2>
+                {channel.is_private && !channel.isDm && (
+                  <button
+                    className="manage-members-btn"
+                    onClick={onManageMembers}
+                    title="Manage members"
+                  >
+                    <UsersIcon />
+                  </button>
+                )}
               </>
             ) : (
               <h2>Select a channel</h2>

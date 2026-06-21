@@ -79,6 +79,121 @@ const createChannel = async (req, res) => {
   }
 };
 
+const getChannelMembers = async (req, res) => {
+  const { channelId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const isMember = await db.query(
+      "SELECT 1 FROM channel_members WHERE channel_id = $1 AND user_id = $2",
+      [channelId, userId]
+    );
+    if (isMember.rows.length === 0) {
+      return res.status(403).json({ message: "Not allowed." });
+    }
+
+    const result = await db.query(
+      `SELECT u.user_id, u.username FROM users u
+       JOIN channel_members cm ON u.user_id = cm.user_id
+       WHERE cm.channel_id = $1`,
+      [channelId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching channel members:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+const updateChannelMembers = async (req, res) => {
+  const { workspaceId, channelId } = req.params;
+  const { memberIds } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const channel = await db.query(
+      "SELECT is_private, is_dm FROM channels WHERE channel_id = $1 AND workspace_id = $2",
+      [channelId, workspaceId]
+    );
+    if (channel.rows.length === 0) {
+      return res.status(404).json({ message: "Channel not found." });
+    }
+    if (!channel.rows[0].is_private || channel.rows[0].is_dm) {
+      return res
+        .status(400)
+        .json({ message: "Only private channels have managed members." });
+    }
+
+    const isMember = await db.query(
+      "SELECT 1 FROM channel_members WHERE channel_id = $1 AND user_id = $2",
+      [channelId, userId]
+    );
+    if (isMember.rows.length === 0) {
+      return res
+        .status(403)
+        .json({ message: "Only members can manage this channel." });
+    }
+
+    const requested = Array.isArray(memberIds) ? memberIds : [];
+    const validRes = await db.query(
+      "SELECT user_id FROM workspace_members WHERE workspace_id = $1 AND user_id = ANY($2)",
+      [workspaceId, Array.from(new Set([...requested, userId]))]
+    );
+    const wanted = validRes.rows.map((r) => r.user_id);
+
+    const currentRes = await db.query(
+      "SELECT user_id FROM channel_members WHERE channel_id = $1",
+      [channelId]
+    );
+    const current = currentRes.rows.map((r) => r.user_id);
+
+    const toAdd = wanted.filter((id) => !current.includes(id));
+    const toRemove = current.filter((id) => !wanted.includes(id));
+
+    const client = await db.pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const id of toAdd) {
+        await client.query(
+          "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
+          [id, channelId]
+        );
+      }
+      if (toRemove.length > 0) {
+        await client.query(
+          "DELETE FROM channel_members WHERE channel_id = $1 AND user_id = ANY($2)",
+          [channelId, toRemove]
+        );
+      }
+      await client.query("COMMIT");
+    } catch (txError) {
+      await client.query("ROLLBACK");
+      throw txError;
+    } finally {
+      client.release();
+    }
+
+    const io = req.app.get("io");
+    if (io) {
+      const affected = Array.from(new Set([...current, ...wanted]));
+      affected.forEach((id) =>
+        io.to(`user:${id}`).emit("channelMembersChanged", { workspaceId, channelId })
+      );
+    }
+
+    const updated = await db.query(
+      `SELECT u.user_id, u.username FROM users u
+       JOIN channel_members cm ON u.user_id = cm.user_id
+       WHERE cm.channel_id = $1`,
+      [channelId]
+    );
+    res.json(updated.rows);
+  } catch (error) {
+    console.error("Error updating channel members:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
 const markRead = async (req, res) => {
   const { channelId } = req.params;
   const userId = req.user.id;
@@ -97,4 +212,9 @@ const markRead = async (req, res) => {
   }
 };
 
-module.exports = { createChannel, markRead };
+module.exports = {
+  createChannel,
+  markRead,
+  getChannelMembers,
+  updateChannelMembers,
+};

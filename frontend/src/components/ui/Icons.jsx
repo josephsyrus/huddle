@@ -9,6 +9,7 @@ import {
   SmilePlus,
   Search,
   Lock,
+  Users,
 } from "lucide-react";
 
 export const HashIcon = (props) => <Hash className="icon" {...props} />;
@@ -28,3 +29,4 @@ export const ReactionIcon = (props) => (
 );
 export const SearchIcon = (props) => <Search className="icon" {...props} />;
 export const LockIcon = (props) => <Lock className="icon" {...props} />;
+export const UsersIcon = (props) => <Users className="icon" {...props} />;
