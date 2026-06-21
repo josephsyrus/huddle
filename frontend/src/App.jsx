@@ -129,6 +129,19 @@ function App() {
         setOnlineUsers((prev) => ({ ...prev, [workspaceId]: onlineUserIds }));
       });
 
+      socket.current.on("memberJoined", ({ workspaceId, member }) => {
+        setWorkspaces((prev) => {
+          const ws = prev[workspaceId];
+          if (!ws) return prev;
+          const existing = ws.members || [];
+          if (existing.some((m) => m.user_id === member.user_id)) return prev;
+          return {
+            ...prev,
+            [workspaceId]: { ...ws, members: [...existing, member] },
+          };
+        });
+      });
+
       return () => {
         socket.current.disconnect();
       };

@@ -92,6 +92,10 @@ io.on("connection", (socket) => {
       addPresence(workspaceId, socket.user.id);
     }
     emitPresence(workspaceId);
+    socket.to(workspaceId).emit("memberJoined", {
+      workspaceId,
+      member: { user_id: socket.user.id, username: socket.user.username },
+    });
   });
 
   socket.on("sendMessage", async (data) => {
