@@ -8,6 +8,9 @@ const initDb = async () => {
     `ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE`
   );
   await db.query(
+    `ALTER TABLE channels ADD COLUMN IF NOT EXISTS is_dm BOOLEAN DEFAULT FALSE`
+  );
+  await db.query(
     `CREATE TABLE IF NOT EXISTS message_reactions (
       reaction_id SERIAL PRIMARY KEY,
       message_id INTEGER REFERENCES messages(message_id) ON DELETE CASCADE,

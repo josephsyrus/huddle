@@ -20,6 +20,12 @@ const Chat = ({
   const messagesEndRef = useRef(null);
   const typingTimeout = useRef(null);
 
+  const channelLabel = channel
+    ? channel.isDm
+      ? `@${channel.channel_name}`
+      : `#${channel.channel_name}`
+    : "";
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingUsers]);
@@ -77,7 +83,7 @@ const Chat = ({
           ) : (
             <div className="placeholder-container">
               <p className="placeholder-text">
-                Be the first to say something in #{channel.channel_name}!
+                Be the first to say something in {channelLabel}!
               </p>
             </div>
           )
@@ -97,7 +103,7 @@ const Chat = ({
               type="text"
               value={newMessage}
               onChange={handleInputChange}
-              placeholder={`Message #${channel.channel_name}`}
+              placeholder={`Message ${channelLabel}`}
               className="chat-input"
             />
             <button type="submit" className="send-button">

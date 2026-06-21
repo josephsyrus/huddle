@@ -25,14 +25,12 @@ const createChannel = async (req, res) => {
         .json({ message: "You are not a member of this workspace." });
     }
 
-    // Create the new channel
     const newChannelResult = await db.query(
       "INSERT INTO channels (channel_name, workspace_id) VALUES ($1, $2) RETURNING channel_id, channel_name",
       [channelName, workspaceId]
     );
     const newChannel = newChannelResult.rows[0];
 
-    // Since all channels are public, add all workspace members to the new channel
     const workspaceMembersResult = await db.query(
       "SELECT user_id FROM workspace_members WHERE workspace_id = $1",
       [workspaceId]

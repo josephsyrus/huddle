@@ -242,7 +242,10 @@ body {
   padding: 0.375rem 0.5rem;
   border-radius: 0.375rem;
 }
-.member-item:hover {
+.member-item.clickable {
+  cursor: pointer;
+}
+.member-item.clickable:hover {
   background-color: var(--sidebar-hover-bg);
 }
 .status-dot {

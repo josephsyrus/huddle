@@ -46,14 +46,12 @@ const createWorkspace = async (req, res) => {
       [ownerId, workspaceId]
     );
 
-    // Create a default 'general' channel
     const generalChannelResult = await db.query(
       "INSERT INTO channels (channel_name, workspace_id) VALUES ($1, $2) RETURNING channel_id",
       ["general", workspaceId]
     );
     const generalChannelId = generalChannelResult.rows[0].channel_id;
 
-    // Add the owner to the 'general' channel
     await db.query(
       "INSERT INTO channel_members (user_id, channel_id) VALUES ($1, $2)",
       [ownerId, generalChannelId]
@@ -102,7 +100,6 @@ const joinWorkspace = async (req, res) => {
       [userId, workspaceId]
     );
 
-    // Find the 'general' channel for this workspace and add the new member
     const generalChannelResult = await db.query(
       "SELECT channel_id FROM channels WHERE workspace_id = $1 AND channel_name = $2",
       [workspaceId, "general"]
@@ -216,12 +213,21 @@ const getWorkspaceData = async (req, res) => {
     }
     const workspace = workspaceResult.rows[0];
 
-    // Fetch channels for the workspace
     const channelsResult = await db.query(
-      "SELECT channel_id, channel_name FROM channels WHERE workspace_id = $1",
+      "SELECT channel_id, channel_name FROM channels WHERE workspace_id = $1 AND is_dm = FALSE",
       [workspaceId]
     );
     const channels = channelsResult.rows;
+
+    const dmsResult = await db.query(
+      `SELECT c.channel_id, ou.user_id AS other_user_id, ou.username AS other_username
+       FROM channels c
+       JOIN channel_members cm ON c.channel_id = cm.channel_id AND cm.user_id = $2
+       JOIN channel_members ocm ON c.channel_id = ocm.channel_id AND ocm.user_id <> $2
+       JOIN users ou ON ocm.user_id = ou.user_id
+       WHERE c.workspace_id = $1 AND c.is_dm = TRUE`,
+      [workspaceId, userId]
+    );
 
     const membersResult = await db.query(
       `SELECT u.user_id, u.username FROM users u
@@ -234,20 +240,26 @@ const getWorkspaceData = async (req, res) => {
       `SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username
              FROM messages m
              JOIN users u ON m.user_id = u.user_id
-             WHERE m.channel_id IN (SELECT channel_id FROM channels WHERE workspace_id = $1)
+             WHERE m.channel_id IN (
+               SELECT cm.channel_id FROM channel_members cm
+               JOIN channels c ON cm.channel_id = c.channel_id
+               WHERE cm.user_id = $2 AND c.workspace_id = $1
+             )
              ORDER BY m.sent_at ASC`,
-      [workspaceId]
+      [workspaceId, userId]
     );
 
     const reactionsResult = await db.query(
       `SELECT mr.message_id, mr.emoji, COUNT(*)::int AS count, ARRAY_AGG(mr.user_id) AS user_ids
        FROM message_reactions mr
        WHERE mr.message_id IN (
-         SELECT message_id FROM messages
-         WHERE channel_id IN (SELECT channel_id FROM channels WHERE workspace_id = $1)
+         SELECT m.message_id FROM messages m
+         JOIN channel_members cm ON m.channel_id = cm.channel_id
+         JOIN channels c ON m.channel_id = c.channel_id
+         WHERE cm.user_id = $2 AND c.workspace_id = $1
        )
        GROUP BY mr.message_id, mr.emoji`,
-      [workspaceId]
+      [workspaceId, userId]
     );
 
     const reactionsByMessage = {};
@@ -276,6 +288,10 @@ const getWorkspaceData = async (req, res) => {
       channels: channels.map((c) => ({
         ...c,
         messages: messagesByChannel[c.channel_id] || [],
+      })),
+      dms: dmsResult.rows.map((d) => ({
+        ...d,
+        messages: messagesByChannel[d.channel_id] || [],
       })),
     };
 

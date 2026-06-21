@@ -1,5 +1,5 @@
 import React from "react";
-import { HashIcon } from "../ui/Icons";
+import { HashIcon, UserIcon } from "../ui/Icons";
 
 const ChatHeader = ({ channel, workspace }) => {
   return (
@@ -7,7 +7,7 @@ const ChatHeader = ({ channel, workspace }) => {
       {workspace ? (
         channel ? (
           <>
-            <HashIcon />
+            {channel.isDm ? <UserIcon /> : <HashIcon />}
             <h2>{channel.channel_name}</h2>
           </>
         ) : (

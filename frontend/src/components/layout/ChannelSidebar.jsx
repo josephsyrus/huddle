@@ -11,6 +11,7 @@ const ChannelSidebar = ({
   currentChannelId,
   user,
   onlineUserIds = [],
+  onOpenDm,
   isUserPopupVisible,
   onLogout,
   onInviteClick,
@@ -109,20 +110,54 @@ const ChannelSidebar = ({
                 />
               </form>
             </div>
+            {workspace.dms?.length > 0 && (
+              <div className="sidebar-section">
+                <h2>DIRECT MESSAGES</h2>
+                <ul className="channel-list">
+                  {workspace.dms.map((dm) => (
+                    <li
+                      key={dm.channel_id}
+                      className={`channel-item ${
+                        currentChannelId === dm.channel_id ? "active" : ""
+                      }`}
+                      onClick={() => onSelectChannel(dm)}
+                    >
+                      <span
+                        className={`status-dot ${
+                          onlineUserIds.includes(dm.otherUserId)
+                            ? "online"
+                            : "offline"
+                        }`}
+                      />
+                      <span>{dm.otherUsername}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {workspace.members?.length > 0 && (
               <div className="sidebar-section">
                 <h2>MEMBERS</h2>
                 <ul className="member-list">
                   {workspace.members.map((member) => {
                     const isOnline = onlineUserIds.includes(member.user_id);
+                    const isSelf = member.user_id === user?.id;
                     return (
-                      <li key={member.user_id} className="member-item">
+                      <li
+                        key={member.user_id}
+                        className={`member-item ${isSelf ? "" : "clickable"}`}
+                        onClick={() => !isSelf && onOpenDm(member.user_id)}
+                        title={isSelf ? undefined : `Message ${member.username}`}
+                      >
                         <span
                           className={`status-dot ${
                             isOnline ? "online" : "offline"
                           }`}
                         />
-                        <span>{member.username}</span>
+                        <span>
+                          {member.username}
+                          {isSelf && " (you)"}
+                        </span>
                       </li>
                     );
                   })}

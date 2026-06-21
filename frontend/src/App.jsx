@@ -164,6 +164,14 @@ function App() {
       const res = await api.get(`/workspaces/${workspaceId}`);
       const fetchedWorkspace = res.data;
 
+      const dms = (fetchedWorkspace.dms || []).map((d) => ({
+        channel_id: d.channel_id,
+        channel_name: d.other_username,
+        otherUsername: d.other_username,
+        otherUserId: d.other_user_id,
+        isDm: true,
+      }));
+
       setWorkspaces((prev) => ({
         ...prev,
         [workspaceId]: {
@@ -173,12 +181,16 @@ function App() {
           owner_id: fetchedWorkspace.owner_id,
           channels: fetchedWorkspace.channels,
           members: fetchedWorkspace.members,
+          dms,
         },
       }));
 
       const messagesByChannel = {};
       fetchedWorkspace.channels.forEach((channel) => {
         messagesByChannel[channel.channel_id] = channel.messages;
+      });
+      (fetchedWorkspace.dms || []).forEach((dm) => {
+        messagesByChannel[dm.channel_id] = dm.messages;
       });
       setMessages(messagesByChannel);
 
@@ -291,6 +303,22 @@ function App() {
     });
   };
 
+  const handleOpenDm = async (targetUserId) => {
+    if (!currentWorkspaceId) return;
+    try {
+      const res = await api.post(`/workspaces/${currentWorkspaceId}/dm`, {
+        userId: targetUserId,
+      });
+      await fetchWorkspaceData(currentWorkspaceId);
+      setCurrentChannelId(res.data.channel_id);
+      setPopups({ ...popups, user: false });
+    } catch (error) {
+      setToast({
+        message: error.response?.data?.message || "Could not open DM.",
+      });
+    }
+  };
+
   const handleToggleReaction = (messageId, emoji) => {
     if (!socket.current || !currentWorkspaceId) return;
     socket.current.emit("toggleReaction", {
@@ -335,9 +363,11 @@ function App() {
   const currentWorkspace = currentWorkspaceId
     ? workspaces[currentWorkspaceId]
     : null;
-  const currentChannel = currentWorkspace?.channels?.find(
-    (c) => c.channel_id === currentChannelId
-  );
+  const currentChannel =
+    currentWorkspace?.channels?.find(
+      (c) => c.channel_id === currentChannelId
+    ) ||
+    currentWorkspace?.dms?.find((d) => d.channel_id === currentChannelId);
   const messagesForCurrentChannel = messages[currentChannelId] || [];
 
   return (
@@ -363,6 +393,7 @@ function App() {
         currentChannelId={currentChannelId}
         user={user}
         onlineUserIds={onlineUsers[currentWorkspaceId] || []}
+        onOpenDm={handleOpenDm}
         isUserPopupVisible={popups.user}
         onLogout={handleLogout}
         onUserClick={() => setPopups({ ...popups, user: !popups.user })}

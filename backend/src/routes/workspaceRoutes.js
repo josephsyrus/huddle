@@ -8,21 +8,21 @@ const {
   deleteWorkspace,
   getWorkspaceData,
 } = require("../controllers/workspaceController");
+const { openDm } = require("../controllers/dmController");
 const { protect } = require("../middleware/authMiddleware");
 
 router.use(protect);
 
-router
-  .route("/")
-  .get(getWorkspaces) // GET /api/workspaces
-  .post(createWorkspace); // POST /api/workspaces
+router.route("/").get(getWorkspaces).post(createWorkspace);
 
-router.post("/join", joinWorkspace); // POST /api/workspaces/join
+router.post("/join", joinWorkspace);
+
+router.post("/:workspaceId/dm", openDm);
 
 router
   .route("/:workspaceId")
-  .get(getWorkspaceData) // GET /api/workspaces/:workspaceId
-  .put(renameWorkspace) // PUT /api/workspaces/:workspaceId
-  .delete(deleteWorkspace); // DELETE /api/workspaces/:workspaceId
+  .get(getWorkspaceData)
+  .put(renameWorkspace)
+  .delete(deleteWorkspace);
 
 module.exports = router;
