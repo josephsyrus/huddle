@@ -3,6 +3,18 @@ const { nanoid } = require("nanoid");
 const { isValidString, LIMITS } = require("../utils/validators");
 const { formatMessage } = require("./messageController");
 
+const getAccessibleChannelIds = async (workspaceId, userId) => {
+  const result = await db.query(
+    `SELECT channel_id FROM channels WHERE workspace_id = $1 AND is_dm = FALSE
+     UNION
+     SELECT cm.channel_id FROM channel_members cm
+     JOIN channels c ON cm.channel_id = c.channel_id
+     WHERE c.workspace_id = $1 AND c.is_dm = TRUE AND cm.user_id = $2`,
+    [workspaceId, userId]
+  );
+  return result.rows.map((r) => r.channel_id);
+};
+
 const getWorkspaces = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -236,30 +248,25 @@ const getWorkspaceData = async (req, res) => {
       [workspaceId]
     );
 
+    const accessibleIds = await getAccessibleChannelIds(workspaceId, userId);
+
     const messagesResult = await db.query(
       `SELECT m.message_id, m.content, m.channel_id, m.sent_at, m.edited_at, m.is_deleted, u.username
              FROM messages m
              JOIN users u ON m.user_id = u.user_id
-             WHERE m.channel_id IN (
-               SELECT cm.channel_id FROM channel_members cm
-               JOIN channels c ON cm.channel_id = c.channel_id
-               WHERE cm.user_id = $2 AND c.workspace_id = $1
-             )
+             WHERE m.channel_id = ANY($1)
              ORDER BY m.sent_at ASC`,
-      [workspaceId, userId]
+      [accessibleIds]
     );
 
     const reactionsResult = await db.query(
       `SELECT mr.message_id, mr.emoji, COUNT(*)::int AS count, ARRAY_AGG(mr.user_id) AS user_ids
        FROM message_reactions mr
        WHERE mr.message_id IN (
-         SELECT m.message_id FROM messages m
-         JOIN channel_members cm ON m.channel_id = cm.channel_id
-         JOIN channels c ON m.channel_id = c.channel_id
-         WHERE cm.user_id = $2 AND c.workspace_id = $1
+         SELECT message_id FROM messages WHERE channel_id = ANY($1)
        )
        GROUP BY mr.message_id, mr.emoji`,
-      [workspaceId, userId]
+      [accessibleIds]
     );
 
     const reactionsByMessage = {};
@@ -285,16 +292,14 @@ const getWorkspaceData = async (req, res) => {
     const unreadResult = await db.query(
       `SELECT m.channel_id, COUNT(*)::int AS unread
        FROM messages m
-       JOIN channel_members cm ON m.channel_id = cm.channel_id AND cm.user_id = $2
-       JOIN channels c ON m.channel_id = c.channel_id
        LEFT JOIN channel_read_status crs
          ON crs.channel_id = m.channel_id AND crs.user_id = $2
-       WHERE c.workspace_id = $1
+       WHERE m.channel_id = ANY($1)
          AND m.is_deleted = FALSE
          AND m.user_id <> $2
          AND m.sent_at > COALESCE(crs.last_read_at, to_timestamp(0))
        GROUP BY m.channel_id`,
-      [workspaceId, userId]
+      [accessibleIds, userId]
     );
 
     const unreadByChannel = {};
@@ -334,20 +339,18 @@ const searchMessages = async (req, res) => {
   }
 
   try {
+    const accessibleIds = await getAccessibleChannelIds(workspaceId, userId);
     const result = await db.query(
       `SELECT m.message_id, m.content, m.channel_id, m.sent_at, u.username, c.channel_name, c.is_dm
        FROM messages m
        JOIN users u ON m.user_id = u.user_id
        JOIN channels c ON m.channel_id = c.channel_id
-       WHERE c.workspace_id = $1
-         AND m.is_deleted = FALSE
-         AND m.content ILIKE $2
-         AND m.channel_id IN (
-           SELECT channel_id FROM channel_members WHERE user_id = $3
-         )
+       WHERE m.is_deleted = FALSE
+         AND m.content ILIKE $1
+         AND m.channel_id = ANY($2)
        ORDER BY m.sent_at DESC
        LIMIT 50`,
-      [workspaceId, `%${q.trim()}%`, userId]
+      [`%${q.trim()}%`, accessibleIds]
     );
 
     res.json(
