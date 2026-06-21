@@ -47,6 +47,15 @@ app.get("/", (req, res) => {
   res.send("Hello from the Huddle Backend!");
 });
 
+app.get("/health", async (req, res) => {
+  try {
+    await db.query("SELECT 1");
+    res.json({ status: "OK" });
+  } catch (err) {
+    res.status(500).json({ status: "error" });
+  }
+});
+
 app.use("/api", apiLimiter);
 
 app.use("/api/users", userRoutes);
@@ -101,7 +110,7 @@ io.on("connection", (socket) => {
     try {
       const member = await db.query(
         "SELECT 1 FROM workspace_members WHERE user_id = $1 AND workspace_id = $2",
-        [socket.user.id, workspaceId]
+        [socket.user.id, workspaceId],
       );
       if (member.rows.length === 0) return;
     } catch (error) {
