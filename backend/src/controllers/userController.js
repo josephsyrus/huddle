@@ -1,12 +1,27 @@
 const db = require("../config/database");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { isValidString, isValidEmail, LIMITS } = require("../utils/validators");
 
 const signup = async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
     return res.status(400).json({ message: "All fields are required." });
+  }
+
+  if (!isValidString(username, LIMITS.username.min, LIMITS.username.max)) {
+    return res
+      .status(400)
+      .json({ message: "Username must be 3-30 characters." });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ message: "A valid email is required." });
+  }
+  if (!isValidString(password, LIMITS.password.min, LIMITS.password.max)) {
+    return res
+      .status(400)
+      .json({ message: "Password must be at least 6 characters." });
   }
 
   try {

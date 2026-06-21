@@ -1,12 +1,15 @@
 const db = require("../config/database");
+const { isValidString, LIMITS } = require("../utils/validators");
 
 const createChannel = async (req, res) => {
   const { workspaceId } = req.params;
   const { channelName } = req.body;
   const userId = req.user.id;
 
-  if (!channelName) {
-    return res.status(400).json({ message: "Channel name is required." });
+  if (!isValidString(channelName, LIMITS.channelName.min, LIMITS.channelName.max)) {
+    return res
+      .status(400)
+      .json({ message: "Channel name must be 1-50 characters." });
   }
 
   try {

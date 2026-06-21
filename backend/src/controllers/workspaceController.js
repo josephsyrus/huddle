@@ -1,5 +1,6 @@
 const db = require("../config/database");
 const { nanoid } = require("nanoid");
+const { isValidString, LIMITS } = require("../utils/validators");
 
 const getWorkspaces = async (req, res) => {
   try {
@@ -22,8 +23,10 @@ const createWorkspace = async (req, res) => {
   const { name } = req.body;
   const ownerId = req.user.id;
 
-  if (!name) {
-    return res.status(400).json({ message: "Workspace name is required." });
+  if (!isValidString(name, LIMITS.workspaceName.min, LIMITS.workspaceName.max)) {
+    return res
+      .status(400)
+      .json({ message: "Workspace name must be 1-50 characters." });
   }
 
   const workspaceId = `ws_${nanoid(12)}`;

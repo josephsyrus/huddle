@@ -1,12 +1,19 @@
 const db = require("../config/database");
+const { isValidString, LIMITS } = require("../utils/validators");
 
 const createMessage = async ({ content, channelId, userId }) => {
+  if (!isValidString(content, LIMITS.message.min, LIMITS.message.max)) {
+    return null;
+  }
+  if (!channelId || !userId) {
+    return null;
+  }
   try {
     const newMessageResult = await db.query(
       `INSERT INTO messages (content, channel_id, user_id) 
        VALUES ($1, $2, $3) 
        RETURNING message_id, content, channel_id, sent_at, user_id`,
-      [content, channelId, userId]
+      [content.trim(), channelId, userId]
     );
 
     const newMessage = newMessageResult.rows[0];
