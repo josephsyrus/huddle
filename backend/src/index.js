@@ -4,6 +4,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
+const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 
 const userRoutes = require("./routes/userRoutes");
@@ -30,7 +31,7 @@ app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello from the Slack Clone Backend!");
+  res.send("Hello from the Huddle Backend!");
 });
 
 app.use("/api/users", userRoutes);
@@ -38,19 +39,30 @@ app.use("/api/workspaces", workspaceRoutes);
 
 app.use("/api/workspaces/:workspaceId/channels", channelRoutes);
 
-io.on("connection", (socket) => {
-  console.log(`User connected: ${socket.id}`);
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) {
+    return next(new Error("Authentication error"));
+  }
+  try {
+    socket.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch (err) {
+    next(new Error("Authentication error"));
+  }
+});
 
+io.on("connection", (socket) => {
   socket.on("joinWorkspace", (workspaceId) => {
     socket.join(workspaceId);
-    console.log(`User ${socket.id} joined workspace room: ${workspaceId}`);
   });
 
   socket.on("sendMessage", async (data) => {
     try {
       const savedMessage = await createMessage({
-        ...data,
-        userId: data.userId,
+        content: data.content,
+        channelId: data.channelId,
+        userId: socket.user.id,
       });
 
       if (savedMessage) {
@@ -61,9 +73,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
-  });
+  socket.on("disconnect", () => {});
 });
 
 httpServer.listen(PORT, () => {
