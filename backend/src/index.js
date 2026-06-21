@@ -20,6 +20,7 @@ const {
 } = require("./controllers/messageController");
 const { initDb } = require("./config/initDb");
 const db = require("./config/database");
+const { createSocketRateLimiter } = require("./middleware/socketRateLimiter");
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -65,6 +66,8 @@ io.use((socket, next) => {
     next(new Error("Authentication error"));
   }
 });
+
+const allowSocketEvent = createSocketRateLimiter({ points: 30, durationMs: 10000 });
 
 const presence = new Map();
 
@@ -119,6 +122,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", async (data) => {
+    if (!allowSocketEvent(socket)) return;
     try {
       const savedMessage = await createMessage({
         content: data.content,
@@ -149,6 +153,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("editMessage", async (data) => {
+    if (!allowSocketEvent(socket)) return;
     try {
       const updated = await editMessage({
         messageId: data.messageId,
@@ -164,6 +169,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("deleteMessage", async (data) => {
+    if (!allowSocketEvent(socket)) return;
     try {
       const result = await deleteMessage({
         messageId: data.messageId,
@@ -178,6 +184,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("toggleReaction", async (data) => {
+    if (!allowSocketEvent(socket)) return;
     try {
       const result = await toggleReaction({
         messageId: data.messageId,
