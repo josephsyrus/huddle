@@ -135,6 +135,17 @@ const toggleReaction = async ({ messageId, userId, emoji }) => {
     return null;
   }
   try {
+    const message = await db.query(
+      "SELECT channel_id FROM messages WHERE message_id = $1",
+      [messageId]
+    );
+    if (message.rows.length === 0) {
+      return null;
+    }
+    if (!(await canAccessChannel(message.rows[0].channel_id, userId))) {
+      return null;
+    }
+
     const inserted = await db.query(
       `INSERT INTO message_reactions (message_id, user_id, emoji)
        VALUES ($1, $2, $3)
