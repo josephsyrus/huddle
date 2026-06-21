@@ -302,6 +302,49 @@ const getWorkspaceData = async (req, res) => {
   }
 };
 
+const searchMessages = async (req, res) => {
+  const { workspaceId } = req.params;
+  const { q } = req.query;
+  const userId = req.user.id;
+
+  if (!q || !q.trim()) {
+    return res.json([]);
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT m.message_id, m.content, m.channel_id, m.sent_at, u.username, c.channel_name, c.is_dm
+       FROM messages m
+       JOIN users u ON m.user_id = u.user_id
+       JOIN channels c ON m.channel_id = c.channel_id
+       WHERE c.workspace_id = $1
+         AND m.is_deleted = FALSE
+         AND m.content ILIKE $2
+         AND m.channel_id IN (
+           SELECT channel_id FROM channel_members WHERE user_id = $3
+         )
+       ORDER BY m.sent_at DESC
+       LIMIT 50`,
+      [workspaceId, `%${q.trim()}%`, userId]
+    );
+
+    res.json(
+      result.rows.map((r) => ({
+        id: r.message_id,
+        text: r.content,
+        username: r.username,
+        channelId: r.channel_id,
+        channelName: r.channel_name,
+        isDm: r.is_dm,
+        createdAt: r.sent_at,
+      }))
+    );
+  } catch (error) {
+    console.error("Error searching messages:", error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
 module.exports = {
   getWorkspaces,
   createWorkspace,
@@ -309,4 +352,5 @@ module.exports = {
   renameWorkspace,
   deleteWorkspace,
   getWorkspaceData,
+  searchMessages,
 };

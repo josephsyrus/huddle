@@ -7,6 +7,7 @@ const {
   renameWorkspace,
   deleteWorkspace,
   getWorkspaceData,
+  searchMessages,
 } = require("../controllers/workspaceController");
 const { openDm } = require("../controllers/dmController");
 const { protect } = require("../middleware/authMiddleware");
@@ -18,6 +19,8 @@ router.route("/").get(getWorkspaces).post(createWorkspace);
 router.post("/join", joinWorkspace);
 
 router.post("/:workspaceId/dm", openDm);
+
+router.get("/:workspaceId/search", searchMessages);
 
 router
   .route("/:workspaceId")

@@ -329,6 +329,27 @@ function App() {
     });
   };
 
+  const handleSearch = async (query) => {
+    if (!currentWorkspaceId) return [];
+    try {
+      const res = await api.get(`/workspaces/${currentWorkspaceId}/search`, {
+        params: { q: query },
+      });
+      return res.data;
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const resolveChannelName = (result) => {
+    const ws = workspaces[currentWorkspaceId];
+    if (result.isDm) {
+      const dm = ws?.dms?.find((d) => d.channel_id === result.channelId);
+      return dm ? `@${dm.otherUsername}` : "Direct message";
+    }
+    return `#${result.channelName}`;
+  };
+
   const handleTyping = (isTyping) => {
     if (!socket.current || !currentWorkspaceId || !currentChannelId) return;
     socket.current.emit(isTyping ? "startTyping" : "stopTyping", {
@@ -411,6 +432,9 @@ function App() {
         onEditMessage={handleEditMessage}
         onDeleteMessage={handleDeleteMessage}
         onToggleReaction={handleToggleReaction}
+        onSearch={handleSearch}
+        onJumpToResult={(result) => setCurrentChannelId(result.channelId)}
+        resolveChannelName={resolveChannelName}
         onTyping={handleTyping}
         typingUsers={(typingUsers[currentChannelId] || []).filter(
           (u) => u !== user.username

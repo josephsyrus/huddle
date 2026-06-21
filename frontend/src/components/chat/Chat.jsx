@@ -11,6 +11,9 @@ const Chat = ({
   onEditMessage,
   onDeleteMessage,
   onToggleReaction,
+  onSearch,
+  onJumpToResult,
+  resolveChannelName,
   onTyping,
   typingUsers,
   user,
@@ -57,7 +60,13 @@ const Chat = ({
 
   return (
     <div className="chat-container">
-      <ChatHeader channel={channel} workspace={workspace} />
+      <ChatHeader
+        channel={channel}
+        workspace={workspace}
+        onSearch={onSearch}
+        onJumpToResult={onJumpToResult}
+        resolveChannelName={resolveChannelName}
+      />
       <div className="messages-area">
         {!workspace ? (
           <div className="placeholder-container">
