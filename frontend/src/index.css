@@ -1069,6 +1069,35 @@ body {
   border-color: var(--purple-accent);
   box-shadow: 0 0 0 3px var(--purple-glow);
 }
+
+.password-input-wrapper {
+  position: relative;
+}
+.password-input-wrapper input {
+  padding-right: 2.75rem;
+}
+.password-toggle-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.password-toggle-btn .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  transition: color 0.15s ease;
+}
+.password-toggle-btn:hover .icon {
+  color: var(--text-light);
+}
 .popup-button {
   width: 100%;
   padding: 0.8rem;

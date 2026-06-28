@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api";
+import PasswordInput from "../ui/PasswordInput";
 const SignUpPage = ({ onLogin, onSwitchToSignIn }) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -56,9 +57,8 @@ const SignUpPage = ({ onLogin, onSwitchToSignIn }) => {
         </div>
         <div className="input-group">
           <label htmlFor="password-signup">Password</label>
-          <input
+          <PasswordInput
             id="password-signup"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Create a password"
@@ -66,9 +66,8 @@ const SignUpPage = ({ onLogin, onSwitchToSignIn }) => {
         </div>
         <div className="input-group">
           <label htmlFor="confirm-password-signup">Confirm Password</label>
-          <input
+          <PasswordInput
             id="confirm-password-signup"
-            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Confirm your password"

@@ -11,6 +11,8 @@ import {
   Lock,
   Users,
   Menu,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export const HashIcon = (props) => <Hash className="icon" {...props} />;
@@ -32,3 +34,5 @@ export const SearchIcon = (props) => <Search className="icon" {...props} />;
 export const LockIcon = (props) => <Lock className="icon" {...props} />;
 export const UsersIcon = (props) => <Users className="icon" {...props} />;
 export const MenuIcon = (props) => <Menu className="icon" {...props} />;
+export const EyeIcon = (props) => <Eye className="icon" {...props} />;
+export const EyeOffIcon = (props) => <EyeOff className="icon" {...props} />;

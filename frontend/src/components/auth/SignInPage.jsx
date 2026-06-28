@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api";
+import PasswordInput from "../ui/PasswordInput";
 
 const SignInPage = ({ onLogin, onSwitchToSignUp }) => {
   const [username, setUsername] = useState("");
@@ -41,9 +42,8 @@ const SignInPage = ({ onLogin, onSwitchToSignUp }) => {
         </div>
         <div className="input-group">
           <label htmlFor="password">Password</label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
