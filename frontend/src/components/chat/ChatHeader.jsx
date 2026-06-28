@@ -1,5 +1,5 @@
 import React from "react";
-import { HashIcon, UserIcon, LockIcon } from "../ui/Icons";
+import { HashIcon, UserIcon, LockIcon, MenuIcon } from "../ui/Icons";
 import SearchBar from "./SearchBar";
 
 const ChatHeader = ({
@@ -8,6 +8,7 @@ const ChatHeader = ({
   onSearch,
   onJumpToResult,
   resolveChannelName,
+  onToggleNav,
 }) => {
   const channelIcon = channel?.isDm ? (
     <UserIcon />
@@ -19,6 +20,14 @@ const ChatHeader = ({
 
   return (
     <div className="chat-header">
+      <button
+        className="nav-toggle-btn"
+        title="Menu"
+        onClick={onToggleNav}
+        aria-label="Open menu"
+      >
+        <MenuIcon />
+      </button>
       {workspace ? (
         <>
           <div className="chat-header-title">

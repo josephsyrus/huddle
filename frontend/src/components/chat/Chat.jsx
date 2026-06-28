@@ -20,9 +20,11 @@ const Chat = ({
   typingUsers,
   user,
   workspace,
+  onToggleNav,
 }) => {
   const [newMessage, setNewMessage] = useState("");
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [activeActionsId, setActiveActionsId] = useState(null);
   const messagesAreaRef = useRef(null);
   const typingTimeout = useRef(null);
   const prevChannelIdRef = useRef(null);
@@ -117,6 +119,7 @@ const Chat = ({
         onSearch={onSearch}
         onJumpToResult={onJumpToResult}
         resolveChannelName={resolveChannelName}
+        onToggleNav={onToggleNav}
       />
       <div className="messages-area" ref={messagesAreaRef} onScroll={handleScroll}>
         {!workspace ? (
@@ -139,6 +142,12 @@ const Chat = ({
                   onEdit={onEditMessage}
                   onDelete={onDeleteMessage}
                   onReact={onToggleReaction}
+                  actionsVisible={activeActionsId === msg.id}
+                  onToggleActions={() =>
+                    setActiveActionsId((prev) =>
+                      prev === msg.id ? null : msg.id
+                    )
+                  }
                 />
               ))}
             </div>

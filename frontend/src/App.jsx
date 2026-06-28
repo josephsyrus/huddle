@@ -35,6 +35,7 @@ function App() {
   const [onlineUsers, setOnlineUsers] = useState({});
   const [unreadCounts, setUnreadCounts] = useState({});
   const [draftDm, setDraftDm] = useState(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const socket = useRef(null);
   const currentChannelIdRef = useRef(null);
   const currentWorkspaceIdRef = useRef(null);
@@ -485,6 +486,7 @@ function App() {
       setCurrentChannelId(null);
       setDraftDm({ otherUserId: member.user_id, otherUsername: member.username });
     }
+    setMobileNavOpen(false);
     setPopups({ ...popups, user: false });
   };
 
@@ -605,7 +607,7 @@ function App() {
     : [];
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
       {toast && (
         <Toast
           message={toast.message}
@@ -614,18 +616,20 @@ function App() {
         />
       )}
 
-      <WorkspaceSidebar
-        data={workspaces}
-        currentWorkspaceId={currentWorkspaceId}
-        onSelectWorkspace={setCurrentWorkspaceId}
-        onAddWorkspace={() => setPopups({ ...popups, addChoice: true })}
-      />
-      <ChannelSidebar
-        workspace={currentWorkspace}
-        onSelectChannel={(channel) => {
-          setDraftDm(null);
-          setCurrentChannelId(channel.channel_id);
-        }}
+      <div className="sidebars">
+        <WorkspaceSidebar
+          data={workspaces}
+          currentWorkspaceId={currentWorkspaceId}
+          onSelectWorkspace={setCurrentWorkspaceId}
+          onAddWorkspace={() => setPopups({ ...popups, addChoice: true })}
+        />
+        <ChannelSidebar
+          workspace={currentWorkspace}
+          onSelectChannel={(channel) => {
+            setDraftDm(null);
+            setCurrentChannelId(channel.channel_id);
+            setMobileNavOpen(false);
+          }}
         onAddChannel={() => setPopups({ ...popups, createChannel: true })}
         currentChannelId={currentChannelId}
         user={user}
@@ -642,6 +646,11 @@ function App() {
         onRenameWorkspace={() =>
           setPopups({ ...popups, renameWorkspace: true })
         }
+        />
+      </div>
+      <div
+        className="mobile-backdrop"
+        onClick={() => setMobileNavOpen(false)}
       />
       <Chat
         workspace={currentWorkspace}
@@ -661,6 +670,7 @@ function App() {
           (u) => u !== user.username
         )}
         user={user}
+        onToggleNav={() => setMobileNavOpen((open) => !open)}
       />
 
       {popups.addChoice && (

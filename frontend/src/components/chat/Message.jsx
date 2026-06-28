@@ -3,7 +3,15 @@ import { EditIcon, TrashIcon, ReactionIcon } from "../ui/Icons";
 
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "🎉", "😮", "😢"];
 
-const Message = ({ message, user, onEdit, onDelete, onReact }) => {
+const Message = ({
+  message,
+  user,
+  onEdit,
+  onDelete,
+  onReact,
+  actionsVisible,
+  onToggleActions,
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(message.text || "");
   const [showPicker, setShowPicker] = useState(false);
@@ -34,7 +42,10 @@ const Message = ({ message, user, onEdit, onDelete, onReact }) => {
   };
 
   return (
-    <div className="message-item">
+    <div
+      className={`message-item ${actionsVisible ? "actions-visible" : ""}`}
+      onClick={onToggleActions}
+    >
       <div className="message-avatar">{initials}</div>
       <div className="message-content">
         <div className="message-meta">
@@ -93,7 +104,10 @@ const Message = ({ message, user, onEdit, onDelete, onReact }) => {
         )}
       </div>
       {!message.deleted && !isEditing && (
-        <div className="message-actions">
+        <div
+          className="message-actions"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="reaction-add">
             <button onClick={() => setShowPicker((s) => !s)} title="Add reaction">
               <ReactionIcon />
