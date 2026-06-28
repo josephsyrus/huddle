@@ -4,6 +4,8 @@ Huddle is a real-time team messaging platform where users can create workspaces,
 
 Built as a full-stack JavaScript application with React on the frontend and Node.js/Express on the backend, backed by PostgreSQL.
 
+**Live demo:** https://huddle.josephsyrus.com
+
 ## Screenshots
 
 **Channel view** - messages, reactions, search, and online presence
@@ -158,7 +160,3 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:5173`.
-
-## License
-
-MIT
